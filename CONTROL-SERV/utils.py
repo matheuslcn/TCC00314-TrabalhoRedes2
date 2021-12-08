@@ -1,5 +1,6 @@
 from socket import *
 from collections import namedtuple
+import time
 
 import pandas
 import sqlalchemy as sql
@@ -11,70 +12,88 @@ import sqlalchemy as sql
 # seu nome. Cada uma dessas funções també tem o argumento conn, que é um
 # sqlalchemy.Connection para o banco de dados do servidor.
 
-usr_tuple = namedtuple( 'usr_tuple' , [ 'nome' , 'hash' , 'premium' ] )
-
-def db_fetch_user( user_name , conn ):
-    
-    # o hash do nome é a chave primaria
-    h = hash( user_name )
-
-    pass
-
-def db_add_user( new_user , conn ):
-    pass
-
-def db_rmv_user( user_name , conn ):
-    pass
-
-def db_upgrade_user( user_name , conn ):
-    pass
-
-#---------------------------------------------------------------------
 # É interessante ter um cache de usuários na memória do servidor para
 # otimizar a performance das operações ao reduzir o numero de acessos
 # ao banco de dados.
 
 cache_usr_tuple = namedtuple( 'cache_usr_tuple' , [ 'usr_tuple' , 'altered' ] )
+usr_tuple = namedtuple( 'usr_tuple' , [ 'nome' , 'hash' , 'premium' ] )
 
-def init_user_cache( num ):
+def init_cache( num ):
     
-    global user_cache
+    global user_cache, group_cache, member_cache
     user_cache = dict()
+    group_cache = dict()
+    member_cache = dict()
 
-    global user_cache_limit
-    user_cache_limit = num
+    global ch_limit
+    ch_limit = num
 
-def user_cache_full():
+def user_cache_full( cnum ):
     return len( user_cache ) >= user_cache_limit
 
-def cache_fetch_user( user_name ):
-    
-    # o hash do nome é a chave primaria
-    h = hash( user_name )
-    usr = user_cache.get( h , None )
-
-    if usr is None:
-        return None
-    
-    tup = usr.usr_tuple
-    if tup.nome != user_name:
-        return None
-    
-    return tup
-
-def cache_add_user( new_user , fetched = False ):
+def make_room():
     pass
 
-def cache_rmv_user( user_name ):
+def fetch_user( user_name , conn ):
+    
+    #-----------------------------------------------------
+    # procurando primeiro no cache. Se existir, é 
+    # só devolver
+    cusr = user_cache.get( user_name , None )
+    if cusr is None:
+    
+        seq = conn.execute( sql.text(
+            '''
+            SELECT nome , hash , premium FROM USER
+            WHERE NOME = {}
+            '''.format( user_name )
+        ) )
+
+        if not seq:
+            return None
+        
+        usr = seq[ 0 ]
+        cusr = cache_usr_tuple( 
+            usr,
+            False
+        )
+
+        # if user_cache_full():
+        #     usr_mkroom()
+        user_cache[ user_name ] = cusr
+    return cusr.usr_tuple
+
+def add_user( user_name , conn , premium = False ):
+    
+    #-----------------------------------------------------
+    # Para evitar duplicatas, ver se o usario ja existe no
+    # BD.
+    if fetch_user( user_name , conn ) is not None:
+        print( "usuario ja existe")
+        return
+    
+    #---------------------------------------------------
+    # usuario nao existe, entao é safo criar novo. Contudo
+    # vamos adiciona-lo só na cache. E sera mandado somente
+    # quando for dado espaço na cache.
+    usr = usr_tuple(
+        nome    = user_name,
+        premium = premium
+    )
+
+    cusr = cache_usr_tuple(
+        user_tuple = usr,
+        altered = True    # quando for removida da cache para dar espaço para novas entradas
+    )
+
+    user_cache[ user_name ] = cusr
+
+def rmv_user( user_name , conn ):
     pass
 
-def cache_upgrade_user( user_name ):
-
+def upgrade_user( user_name , conn ):
     pass
-
-#--------------------------------------------------------------------
-# Cada uma das demais tabelas tem suas funções equivalentes as da tabela
-# de usuarios. Aqui para tabela de grupos.
 
 group_tuple = namedtuple( 'group_tuple' , [ 'nome' , 'id' , 'dono' ] )
 
