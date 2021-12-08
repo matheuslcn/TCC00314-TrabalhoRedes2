@@ -5,19 +5,18 @@ import time
 import pandas
 import sqlalchemy as sql
 
-#---------------------------------------------------------------------
-# O objetivo das funçoes abaixo é de gerir a interação do servidor de
-# controle com a tabela de usuarios no servidor. Cada entrada dessa tabela
-# é indexada pelo seu hash, mas cada usuario prefere se identificar pelo
-# seu nome. Cada uma dessas funções també tem o argumento conn, que é um
-# sqlalchemy.Connection para o banco de dados do servidor.
-
+# -------------------------------------------------------------------------
 # É interessante ter um cache de usuários na memória do servidor para
 # otimizar a performance das operações ao reduzir o numero de acessos
 # ao banco de dados.
 
-cache_usr_tuple = namedtuple( 'cache_usr_tuple' , [ 'usr_tuple' , 'altered' ] )
-usr_tuple = namedtuple( 'usr_tuple' , [ 'nome' , 'hash' , 'premium' ] )
+CH_USR = 0  # Cache para usuarios
+CH_MBR = 1  # Para relação usuario ( pertence ) grupo
+CH_GRP = 2  # Para grupos
+
+usr_tuple = namedtuple( 'usr_tuple' , [ 'name' , 'premium' ] )
+grp_tuple = namedtuple( 'grp_tuple' , [ 'name' , 'owner'] )
+mbr_tuple = namedtuple( 'mbr_tuple' , [ 'usr_name' , "grp_name" ] )
 
 def init_cache( num ):
     
@@ -29,40 +28,108 @@ def init_cache( num ):
     global ch_limit
     ch_limit = num
 
-def user_cache_full( cnum ):
-    return len( user_cache ) >= user_cache_limit
+def select_cache( ch_num = CH_USR ):
 
-def make_room():
-    pass
+    ch = None
+    if ch_num == CH_USR:
+        ch = user_cache
+    elif ch_num == CH_MBR:
+        ch = member_cache
+    elif ch_num == CH_GRP:
+        ch = group_cache
+    
+    return ch
+
+def cache_full( ch_num = CH_USR ):
+    
+    ch = select_cache( ch_num )
+    if ch is None:
+        return False
+    return len( ch ) >= ch_limit
+
+def add_cache( nome, tup, new_tup = False, ch_num = CH_USR ):
+
+    '''
+    se new_tup for verdadeiro, significa que a tupla foi criada pelo servidor
+    e nao tem uma entrada equivalente na tabela.
+    '''
+
+    ch = select_cache( ch_num )
+    if ch is None:
+        raise ValueError( "ESSE CACHE NAO EXISTE")
+
+    cache_tup = ( tup, new_tup, time.time() )
+    ch[ nome ] = cache_tup
+
+def fetch_cache( nome , ch_num = CH_USR ):
+
+    ch = select_cache( ch_num )
+    if ch is None:
+        raise ValueError( "ESSE CACHE NAO EXISTE")
+    
+    cache_tup = ch.get( nome , None )
+    if cache_tup is None:
+        # raise ValueError( "ESSA ENTRADA EXISTE NO CACHE")
+        return None
+    
+    tup , altered , _ = cache_tup
+    ch[ nome ] = ( tup , altered , time.time() )
+
+    return tup
+
+def pop_cache( ch_num = CH_USR ):
+
+    ch = select_cache( ch_num )
+    if ch is None:
+        raise ValueError( "ESSE CACHE NAO EXISTE")
+    
+    foo = lambda x : ch[ x ][ 2 ]
+    lru_key = min( ch.keys , foo )
+    tup , altered , _ = ch[ lru_key ]
+
+    del ch[ lru_key ]
+    return tup , altered
+
+#---------------------------------------------------------------------
+# O objetivo das funçoes abaixo é de gerir a interação do servidor de
+# controle com a tabela de usuarios no servidor. Cada entrada dessa tabela
+# é indexada pelo seu hash, mas cada usuario prefere se identificar pelo
+# seu nome. Cada uma dessas funções també tem o argumento conn, que é um
+# sqlalchemy.Connection para o banco de dados do servidor.
 
 def fetch_user( user_name , conn ):
     
     #-----------------------------------------------------
     # procurando primeiro no cache. Se existir, é 
     # só devolver
-    cusr = user_cache.get( user_name , None )
-    if cusr is None:
+    tup = fetch_cache( user_name )
+    if tup is None:
     
         seq = conn.execute( sql.text(
             '''
-            SELECT nome , hash , premium FROM USER
-            WHERE NOME = {}
+            SELECT nome , premium FROM USER
+            WHERE nome = {}
             '''.format( user_name )
         ) )
 
         if not seq:
             return None
         
-        usr = seq[ 0 ]
-        cusr = cache_usr_tuple( 
-            usr,
-            False
-        )
+        if cache_full():
 
-        # if user_cache_full():
-        #     usr_mkroom()
-        user_cache[ user_name ] = cusr
-    return cusr.usr_tuple
+            old_tup , altered = pop_cache()
+            if altered:
+                conn.execute( sql.text(
+                    '''
+                    INSERT INTO user
+                    VALUES ( {} , {} )
+                    '''.format( old_tup.name , int( old_tup.premium ) )
+                ) )
+                conn.commit()
+        
+        tup = seq[ 0 ]
+        add_cache( user_name , tup )
+    return tup
 
 def add_user( user_name , conn , premium = False ):
     
@@ -82,12 +149,7 @@ def add_user( user_name , conn , premium = False ):
         premium = premium
     )
 
-    cusr = cache_usr_tuple(
-        user_tuple = usr,
-        altered = True    # quando for removida da cache para dar espaço para novas entradas
-    )
-
-    user_cache[ user_name ] = cusr
+    
 
 def rmv_user( user_name , conn ):
     pass

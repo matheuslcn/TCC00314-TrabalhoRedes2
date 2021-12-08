@@ -1,6 +1,5 @@
 import socket
 
-
 HOST = '127.0.0.1'      # IP do servidor de streaming (localhost)
 SERVER_PORT = 5555      # Porta do servidor com o streaming
 STREAM_PORT = 6000      # Porta para se comunicar com os clientes
