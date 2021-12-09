@@ -1,5 +1,6 @@
 import socket
 
+
 HOST = '127.0.0.1'          # IP do servidor
 SERVER_PORT = 5000          # Porta onde o servidor está escutando
 STREAM_HOST = '127.0.0.1'   # IP do servidor de streaming
@@ -23,8 +24,11 @@ print('Esperando conexão do cliente...')
 
 # Aceita uma conexao com o cliente
 while True:
+    # Aceita a conexao com um cliente e pega seu endereco de ip
     client_connection, client_ip = server_client_socket.accept()
     print('GOT CONNECTION FROM:', client_ip)
+    bytes_client_ip = client_ip[0].encode()         # Transforma o endereco de IP do cliente de str para bytes
+    stream_connection.sendall(bytes_client_ip)      # Manda os bytes para o streaming
 
 
 

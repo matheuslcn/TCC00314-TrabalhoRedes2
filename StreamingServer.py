@@ -17,7 +17,9 @@ stream_client_socket.bind((HOST, STREAM_PORT))
 print("Esperando mensagens dos clientes...")
 
 while True:
-    pass
+    data_byte = stream_server_socket.recv(1024)     # Recebe os bytes mandados pelo servidor
+    data_string = data_byte.decode()                # Transforma os bytes em uma string
+    print(data_string)                              # Mostra a string recebida
 
 
 
