@@ -54,6 +54,8 @@ def add_cache( nome, tup, new_tup = False, ch_num = CH_USR ):
     e nao tem uma entrada equivalente na tabela.
     '''
 
+    new_tup = int( new_tup )
+
     ch = select_cache( ch_num )
     if ch is None:
         raise ValueError( "ESSE CACHE NAO EXISTE")
@@ -90,6 +92,20 @@ def pop_cache( ch_num = CH_USR ):
     del ch[ lru_key ]
     return tup , altered
 
+def make_room( conn , ch_num = CH_USR  ):
+    
+    tup , altered = pop_cache( ch_num )
+    if altered:
+
+        s = "INSERT INTO user VALUES ( {} , {} )"
+        if ch_num == CH_MBR:
+            s = "INSERT INTO membership VALUES ( {} , {} )"
+        elif ch_num == CH_GRP:
+            s = "INSERT INTO group VALUES ( {} , {} )"
+        
+        conn.execute( sql.text( s.format( *tup ) ) )
+
+
 #---------------------------------------------------------------------
 # O objetivo das funçoes abaixo é de gerir a interação do servidor de
 # controle com a tabela de usuarios no servidor. Cada entrada dessa tabela
@@ -107,7 +123,7 @@ def fetch_user( user_name , conn ):
     
         seq = conn.execute( sql.text(
             '''
-            SELECT nome , premium FROM USER
+            SELECT name , premium FROM user
             WHERE nome = {}
             '''.format( user_name )
         ) )
@@ -116,16 +132,7 @@ def fetch_user( user_name , conn ):
             return None
         
         if cache_full():
-
-            old_tup , altered = pop_cache()
-            if altered:
-                conn.execute( sql.text(
-                    '''
-                    INSERT INTO user
-                    VALUES ( {} , {} )
-                    '''.format( old_tup.name , int( old_tup.premium ) )
-                ) )
-                conn.commit()
+            make_room( conn , CH_USR )
         
         tup = seq[ 0 ]
         add_cache( user_name , tup )
@@ -146,10 +153,11 @@ def add_user( user_name , conn , premium = False ):
     # quando for dado espaço na cache.
     usr = usr_tuple(
         nome    = user_name,
-        premium = premium
+        premium = int( premium )
     )
 
-    
+    add_cache( user_name , usr, new_tup = True )
+
 
 def rmv_user( user_name , conn ):
     pass
