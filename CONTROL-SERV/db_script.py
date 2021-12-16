@@ -6,7 +6,6 @@ import sqlalchemy as sql
 if __name__ == "__main__":
 
     engine = sql.create_engine( 'sqlite:///CONTROL-SERV/controle.db')
-
     with engine.connect() as conn:
 
         #-----------------------------------------------------------

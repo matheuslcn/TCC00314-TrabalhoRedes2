@@ -19,10 +19,6 @@ CH_USR = 0  # Cache para usuarios
 CH_MBR = 1  # Para relação usuario ( pertence ) grupo
 CH_GRP = 2  # Para grupos
 
-# usr_tuple = namedtuple( 'usr_tuple' , [ 'name' , 'premium' ] )
-# grp_tuple = namedtuple( 'grp_tuple' , [ 'name' , 'owner'] )
-# mbr_tuple = namedtuple( 'mbr_tuple' , [ 'u_name' , "g_name" ] )
-
 ch_tuple = namedtuple( 'ch_tup' , [ 'db_tuple' , 'time_stamp'] )
 
 def init_cache( num ):
@@ -161,6 +157,8 @@ def read( key_tup, conn ):
     make_room( conn )
     add_cache( key_tup , db_tup )
 
+    return db_tup
+
 def delete( key_tup , conn ):
 
     if fetch_cache( key_tup ) is not None:
@@ -169,4 +167,29 @@ def delete( key_tup , conn ):
     db_num , db_key = key_tup
     stm = delet_stm( db_num , db_key )
     conn.execute( sql.text( stm ) )
+
+#-------------------------------------------------------------------------
+# essas funcoes serao a interface com o modulo main
+
+usr_tuple = namedtuple( 'usr_tuple' , [ 'name' , 'premium' ] )
+grp_tuple = namedtuple( 'grp_tuple' , [ 'name' , 'owner'] )
+mbr_tuple = namedtuple( 'mbr_tuple' , [ 'name' , 'u_name' , "g_name" ] )
+
+def get_user_information( user ):
+
+    key_tup = ( user , CH_USR )
+    engine = sql.create_engine( 'sqlite:///CONTROL-SERV/controle.db')
+    with engine.connect() as conn:
+        return read( key_tup , conn )
+
+def add_user( user , premium = False , flush = False ):
+
+    key_tup = ( user , CH_USR )
+    db_tup  = usr_tuple( name = user , premium = int( premium ) ) 
+    engine = sql.create_engine( 'sqlite:///CONTROL-SERV/controle.db')
+    with engine.connect() as conn:
+        write( key_tup , db_tup , conn , to_flush = flush )
+
+        
+
 

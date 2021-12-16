@@ -24,7 +24,13 @@ def get_user_information(user):
     :param user:
     :return 'USER_INFORMATION' + ' ' + user_id:
     """
-    print(user)
+    # user_tup = utils.get_user_information( user )
+    # if user_tup is None:
+    #     return 'USER UNKNOWN'
+    
+    # name , premium = user_tup
+    # return 'USER_INFORMATION {} {}'.format( name , bool( premium ))
+
     return 'USER_INFORMATION' + ' ' + 'user_id'
 
 
@@ -36,6 +42,15 @@ def login(user):
     :param user:
     :return 'STATUS_DO_USUARIO' + ' ' + user_id || 'ENTRAR_NA_APP_ACK'  :
     """
+
+    # user_tup = utils.get_user_information( user )
+    # if user_tup is None:
+    #     utils.add_user( user )
+    #     return 'ENTRAR_NA_APP_ACK'
+    
+    # name , premium = user_tup
+    # return 'STATUS_DO_USUARIO {} {}'.format( name , bool( premium ))
+
     return 'STATUS_DO_USUARIO' + ' ' + 'user_id'
 
 
