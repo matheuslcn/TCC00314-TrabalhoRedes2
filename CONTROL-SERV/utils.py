@@ -16,7 +16,7 @@ CH_GRP = 2  # Para grupos
 
 usr_tuple = namedtuple( 'usr_tuple' , [ 'name' , 'premium' ] )
 grp_tuple = namedtuple( 'grp_tuple' , [ 'name' , 'owner'] )
-mbr_tuple = namedtuple( 'mbr_tuple' , [ 'usr_name' , "grp_name" ] )
+mbr_tuple = namedtuple( 'mbr_tuple' , [ 'u_name' , "g_name" ] )
 
 def init_cache( num ):
     
@@ -59,9 +59,13 @@ def add_cache( nome, tup, new_tup = False, ch_num = CH_USR ):
     ch = select_cache( ch_num )
     if ch is None:
         raise ValueError( "ESSE CACHE NAO EXISTE")
-
+    
+    if cache_full( ch ):
+        return False
+    
     cache_tup = ( tup, new_tup, time.time() )
     ch[ nome ] = cache_tup
+    return True
 
 def fetch_cache( nome , ch_num = CH_USR ):
 
@@ -79,6 +83,13 @@ def fetch_cache( nome , ch_num = CH_USR ):
 
     return tup
 
+def in_cache( nome , ch_num = CH_USR ):
+
+    try:
+        return not( fetch_cache ) is None
+    except ValueError:
+        return False
+
 def pop_cache( ch_num = CH_USR ):
 
     ch = select_cache( ch_num )
@@ -90,113 +101,43 @@ def pop_cache( ch_num = CH_USR ):
     tup , altered , _ = ch[ lru_key ]
 
     del ch[ lru_key ]
-    return tup , altered
+    return lru_key , tup , altered
 
-def make_room( conn , ch_num = CH_USR  ):
+#--------------------------------------------------------------------
+# Declarações para interagir com o SGBD.
+def select_stm( tup_name , db_num = CH_USR ):
     
-    tup , altered = pop_cache( ch_num )
-    if altered:
+    if db_num == CH_USR:
+        pass
+    elif db_num == CH_GRP:
+        pass
+    elif db_num == CH_MBR:
+        pass
+    else:
+        raise ValueError( "NAO EXISTE" )
+    
+    return s
 
-        s = "INSERT INTO user VALUES ( {} , {} )"
-        if ch_num == CH_MBR:
-            s = "INSERT INTO membership VALUES ( {} , {} )"
-        elif ch_num == CH_GRP:
-            s = "INSERT INTO group VALUES ( {} , {} )"
-        
-        conn.execute( sql.text( s.format( *tup ) ) )
+def add_stm( tup , db_num = CH_USR ):
+    pass
 
+def alter_stm( tup , db_num = CH_USR ):
+    pass
+
+def remv_stm( tup , db_num = CH_USR ):
+    pass
 
 #---------------------------------------------------------------------
 # O objetivo das funçoes abaixo é de gerir a interação do servidor de
-# controle com a tabela de usuarios no servidor. Cada entrada dessa tabela
-# é indexada pelo seu hash, mas cada usuario prefere se identificar pelo
-# seu nome. Cada uma dessas funções també tem o argumento conn, que é um
-# sqlalchemy.Connection para o banco de dados do servidor.
-
-def fetch_user( user_name , conn ):
-    
-    #-----------------------------------------------------
-    # procurando primeiro no cache. Se existir, é 
-    # só devolver
-    tup = fetch_cache( user_name )
-    if tup is None:
-    
-        seq = conn.execute( sql.text(
-            '''
-            SELECT name , premium FROM user
-            WHERE nome = {}
-            '''.format( user_name )
-        ) )
-
-        if not seq:
-            return None
-        
-        if cache_full():
-            make_room( conn , CH_USR )
-        
-        tup = seq[ 0 ]
-        add_cache( user_name , tup )
-    return tup
-
-def add_user( user_name , conn , premium = False ):
-    
-    #-----------------------------------------------------
-    # Para evitar duplicatas, ver se o usario ja existe no
-    # BD.
-    if fetch_user( user_name , conn ) is not None:
-        print( "usuario ja existe")
-        return
-    
-    #---------------------------------------------------
-    # usuario nao existe, entao é safo criar novo. Contudo
-    # vamos adiciona-lo só na cache. E sera mandado somente
-    # quando for dado espaço na cache.
-    usr = usr_tuple(
-        nome    = user_name,
-        premium = int( premium )
-    )
-
-    add_cache( user_name , usr, new_tup = True )
-
-
-def rmv_user( user_name , conn ):
+# controle com as tabelas do banco de dados
+def fetch_db( tup_name , conn , db_num = CH_USR ):
     pass
 
-def upgrade_user( user_name , conn ):
+def add_db( tup_name , tup , conn , db_num = CH_USR ):
     pass
 
-group_tuple = namedtuple( 'group_tuple' , [ 'nome' , 'id' , 'dono' ] )
-
-def db_fetch_group( group_name, conn ):
-    
-    # o hash do nome é a chave primaria
-    h = hash( group_name )
-
+def remove_db( tup_name , tup , conn , db_num = CH_USR ):
     pass
 
-def db_add_group( group_name, group_owner , conn ):
-    pass
-
-def db_rmv_group( group_name , conn ):
-    pass
-
-cache_group_tuple = namedtuple( 'cache_group_tuple' , [ 'group_tuple' , 'altered' ] )
-
-def init_group_cache( num ):
-    pass
-
-def group_cache_full():
-    pass
-
-def cache_fetch_group( group_name ):
-    
-    # o hash do nome é a chave primaria
-    h = hash( group_name )
-
-    pass
-
-def cache_add_group( group_name , owner ):
-    pass
-
-def cache_rmv_group( group_name ):
+def alter_db( tup_name , tup , conn , db_num = CH_USR ):
     pass
