@@ -1,6 +1,6 @@
 import socket
-from utils import *
-init_cache( 10 )
+import utils
+
 
 HOST = '127.0.0.1'  # IP do servidor
 SERVER_PORT = 5000  # Porta onde o servidor está escutando
@@ -40,7 +40,7 @@ def login(user):
 
 
 def connection_manager(conn):
-    
+
     with conn:
         data_byte = conn.recv(1024)
         data_string = data_byte.decode()

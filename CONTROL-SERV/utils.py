@@ -169,3 +169,4 @@ def delete( key_tup , conn ):
     db_num , db_key = key_tup
     stm = delet_stm( db_num , db_key )
     conn.execute( sql.text( stm ) )
+
