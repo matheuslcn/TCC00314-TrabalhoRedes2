@@ -1,4 +1,5 @@
 '''
+Esse script inicializa o banco de dados do trabalho. Use apenas uma vez
 '''
 import sqlalchemy as sql
 

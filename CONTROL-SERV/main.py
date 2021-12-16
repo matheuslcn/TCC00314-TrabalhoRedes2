@@ -1,4 +1,6 @@
 import socket
+from utils import *
+init_cache( 10 )
 
 HOST = '127.0.0.1'  # IP do servidor
 SERVER_PORT = 5000  # Porta onde o servidor está escutando
@@ -34,11 +36,11 @@ def login(user):
     :param user:
     :return 'STATUS_DO_USUARIO' + ' ' + user_id || 'ENTRAR_NA_APP_ACK'  :
     """
-    print(user)
     return 'STATUS_DO_USUARIO' + ' ' + 'user_id'
 
 
 def connection_manager(conn):
+    
     with conn:
         data_byte = conn.recv(1024)
         data_string = data_byte.decode()

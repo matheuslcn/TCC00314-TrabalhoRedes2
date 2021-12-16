@@ -9,135 +9,163 @@ import sqlalchemy as sql
 # É interessante ter um cache de usuários na memória do servidor para
 # otimizar a performance das operações ao reduzir o numero de acessos
 # ao banco de dados.
+# 
+# Essa cache sera formada por um dicionario. Cada chave dessa cache será uma
+# tupla contendo um numero representando a tabela do banco de dados e a chave 
+# de uma tupla da respectiva tabela. O valor correspondente sera uma tupla da
+# tabela mais um timestamp de quando a chave foi consultada.
 
 CH_USR = 0  # Cache para usuarios
 CH_MBR = 1  # Para relação usuario ( pertence ) grupo
 CH_GRP = 2  # Para grupos
 
-usr_tuple = namedtuple( 'usr_tuple' , [ 'name' , 'premium' ] )
-grp_tuple = namedtuple( 'grp_tuple' , [ 'name' , 'owner'] )
-mbr_tuple = namedtuple( 'mbr_tuple' , [ 'u_name' , "g_name" ] )
+# usr_tuple = namedtuple( 'usr_tuple' , [ 'name' , 'premium' ] )
+# grp_tuple = namedtuple( 'grp_tuple' , [ 'name' , 'owner'] )
+# mbr_tuple = namedtuple( 'mbr_tuple' , [ 'u_name' , "g_name" ] )
+
+ch_tuple = namedtuple( 'ch_tup' , [ 'db_tuple' , 'time_stamp'] )
 
 def init_cache( num ):
-    
-    global user_cache, group_cache, member_cache
-    user_cache = dict()
-    group_cache = dict()
-    member_cache = dict()
+
+    global db_cache
+    db_cache = dict()
 
     global ch_limit
     ch_limit = num
 
-def select_cache( ch_num = CH_USR ):
+    global cache_full
+    cache_full = lambda : len( db_cache ) >= ch_limit
 
-    ch = None
-    if ch_num == CH_USR:
-        ch = user_cache
-    elif ch_num == CH_MBR:
-        ch = member_cache
-    elif ch_num == CH_GRP:
-        ch = group_cache
-    
-    return ch
+def fetch_cache( key_tup ):
 
-def cache_full( ch_num = CH_USR ):
-    
-    ch = select_cache( ch_num )
-    if ch is None:
+    ch_tup = db_cache.get( key_tup , None )
+    if not( ch_tup is None ):
+        ch_tup.time_stamp = time.time()
+    return ch_tup[ 0 ]
+
+def add_cache( key_tup , db_tup ):
+
+    if cache_full():
         return False
-    return len( ch ) >= ch_limit
 
-def add_cache( nome, tup, new_tup = False, ch_num = CH_USR ):
-
-    '''
-    se new_tup for verdadeiro, significa que a tupla foi criada pelo servidor
-    e nao tem uma entrada equivalente na tabela.
-    '''
-
-    new_tup = int( new_tup )
-
-    ch = select_cache( ch_num )
-    if ch is None:
-        raise ValueError( "ESSE CACHE NAO EXISTE")
+    tup = fetch_cache( key_tup )
+    if tup is None:
+        db_cache[ key_tup ] = ch_tuple( 
+            db_tuple   = db_tup,
+            time_stamp = time.time()
+        )
+        return True
     
-    if cache_full( ch ):
-        return False
-    
-    cache_tup = ( tup, new_tup, time.time() )
-    ch[ nome ] = cache_tup
-    return True
+    return False
 
-def fetch_cache( nome , ch_num = CH_USR ):
+def remove_cache( key_tup ):
 
-    ch = select_cache( ch_num )
-    if ch is None:
-        raise ValueError( "ESSE CACHE NAO EXISTE")
-    
-    cache_tup = ch.get( nome , None )
-    if cache_tup is None:
-        # raise ValueError( "ESSA ENTRADA EXISTE NO CACHE")
-        return None
-    
-    tup , altered , _ = cache_tup
-    ch[ nome ] = ( tup , altered , time.time() )
-
+    tup = fetch_cache( key_tup )
+    if not ( tup is None ):
+        del db_cache[ key_tup ]
     return tup
 
-def in_cache( nome , ch_num = CH_USR ):
+def least_ru( ):
+
+    '''
+        retorna a entrada da cache com o menor time_stamp
+    '''
+    if len( db_cache ) == 0:
+        return None
+
+    foo = lambda x :db_cache[ x ].time_stamp
+    return min( db_cache.keys() , key = foo )
+
+def flush_cache( key_tup , conn ):
+
+    db_num , db_key = key_tup
+    db_tup = fetch_cache( key_tup ).db_tuple
+
+    w_statement = write_stm( db_num , db_tup )
+    d_statement = delet_stm( db_num , db_key )
 
     try:
-        return not( fetch_cache ) is None
-    except ValueError:
-        return False
+        conn.execute( sql.text( w_statement ) )
+    except sql.exc.DatabaseError:
+        conn.execute( sql.text( d_statement ) )
+        conn.execute( sql.text( w_statement ) )
 
-def pop_cache( ch_num = CH_USR ):
+def make_room( conn ):
 
-    ch = select_cache( ch_num )
-    if ch is None:
-        raise ValueError( "ESSE CACHE NAO EXISTE")
+    if cache_full():
+        exit_key = least_ru()
+        flush_cache( exit_key , conn )
+        remove_cache( exit_key )
     
-    foo = lambda x : ch[ x ][ 2 ]
-    lru_key = min( ch.keys , foo )
-    tup , altered , _ = ch[ lru_key ]
-
-    del ch[ lru_key ]
-    return lru_key , tup , altered
-
 #--------------------------------------------------------------------
 # Declarações para interagir com o SGBD.
-def select_stm( tup_name , db_num = CH_USR ):
-    
+
+def get_stm( db_num ):
+
     if db_num == CH_USR:
-        pass
+        stm = "user"
+
     elif db_num == CH_GRP:
-        pass
+        stm = "group"
+
     elif db_num == CH_MBR:
-        pass
+        stm = "membership"
     else:
         raise ValueError( "NAO EXISTE" )
     
-    return s
+    return stm
 
-def add_stm( tup , db_num = CH_USR ):
-    pass
+def select_stm( db_num , db_key ):
+    
+    stm = get_stm( db_num )
+    return "SELECT * FROM " + stm + " WHERE name = {}".format( db_key )
 
-def alter_stm( tup , db_num = CH_USR ):
-    pass
+def write_stm( db_num , db_tup ):
 
-def remv_stm( tup , db_num = CH_USR ):
-    pass
+    stm = get_stm( db_num )    
+    return "INSERT INTO " + stm + " VALUES ( {} , {} )".format( *db_tup )
+
+def delet_stm( db_num , db_key ):
+
+    stm = get_stm( db_num )
+    return "DELETE FROM " + stm + " user WHERE name = {}".format( db_key )
 
 #---------------------------------------------------------------------
 # O objetivo das funçoes abaixo é de gerir a interação do servidor de
 # controle com as tabelas do banco de dados
-def fetch_db( tup_name , conn , db_num = CH_USR ):
-    pass
 
-def add_db( tup_name , tup , conn , db_num = CH_USR ):
-    pass
+def write( key_tup , db_tup , conn , to_flush = False ):
 
-def remove_db( tup_name , tup , conn , db_num = CH_USR ):
-    pass
+    if not ( fetch_cache( key_tup ) is None ):
+        remove_cache( key_tup )
+    else:
+        make_room( conn )
+    
+    add_cache( key_tup , db_tup )
+    if to_flush:
+        flush_cache( key_tup , conn )
 
-def alter_db( tup_name , tup , conn , db_num = CH_USR ):
-    pass
+def read( key_tup, conn ):
+
+    db_tup = fetch_cache( key_tup )
+    if db_tup is not None:
+        return db_tup
+    
+    db_num , db_key = key_tup
+    stm = select_stm( db_num , db_key )
+    seq = conn.execute( sql.text( stm ) )
+    if not seq:
+        return None
+    
+    db_tup = seq[ 0 ]
+    make_room( conn )
+    add_cache( key_tup , db_tup )
+
+def delete( key_tup , conn ):
+
+    if fetch_cache( key_tup ) is not None:
+        remove_cache( key_tup )
+    
+    db_num , db_key = key_tup
+    stm = delet_stm( db_num , db_key )
+    conn.execute( sql.text( stm ) )
