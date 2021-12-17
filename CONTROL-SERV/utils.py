@@ -169,7 +169,8 @@ def delete( key_tup , conn ):
     conn.execute( sql.text( stm ) )
 
 #-------------------------------------------------------------------------
-# essas funcoes serao a interface com o modulo main
+# Essas funcoes serao a interface com o modulo main. As demais funcoes( acima 
+# desse bloco ), Não devem ser usadas, são como uma caixa preta.
 
 usr_tuple = namedtuple( 'usr_tuple' , [ 'name' , 'premium' ] )
 grp_tuple = namedtuple( 'grp_tuple' , [ 'name' , 'owner'] )
@@ -191,5 +192,4 @@ def add_user( user , premium = False , flush = False ):
         write( key_tup , db_tup , conn , to_flush = flush )
 
         
-
 
