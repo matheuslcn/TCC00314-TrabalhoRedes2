@@ -8,6 +8,16 @@ if __name__ == "__main__":
     engine = sql.create_engine( 'sqlite:///CONTROL-SERV/controle.db')
     with engine.connect() as conn:
 
+        #------------------------------------------------------------
+        # Da um reset nas tabelas caso elas existam
+        # conn.execute( sql.text(
+        #     '''
+        #     DROP TABLE IF EXISTS "user";
+        #     DROP TABLE IF EXISTS "group";
+        #     DROP TABLE IF EXISTS "membership";
+        #     '''
+        # ) )
+
         #-----------------------------------------------------------
         # Tabela dos usuarios. Cada entrada é um nome de usuario ( string )
         # e um booleano indicando se é um premium ou nao.
@@ -16,6 +26,7 @@ if __name__ == "__main__":
             CREATE TABLE "user"(
                 "name"	TEXT NOT NULL,
                 "premium"	INTEGER NOT NULL DEFAULT 0,
+
                 PRIMARY KEY("name")
             );
             '''
@@ -31,6 +42,7 @@ if __name__ == "__main__":
                 "owner" TEXT NOT NULL,
 
                 PRIMARY KEY ("name"),
+
                 FOREIGN KEY ("owner") REFERENCES "user"("name")
                 ON DELETE CASCADE
             );
@@ -42,8 +54,12 @@ if __name__ == "__main__":
         conn.execute( sql.text(
             '''
             CREATE TABLE "membership"(
+
+                "name"   TEXT NOT NULL,
                 "u_name" TEXT NOT NULL,
                 "g_name" TEXT NOT NULL,
+
+                PRIMARY KEY ("name"),
 
                 FOREIGN KEY ("u_name") REFERENCES  "user"("name")
                 ON DELETE CASCADE,
