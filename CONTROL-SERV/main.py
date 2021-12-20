@@ -1,6 +1,8 @@
 import socket
 import utils
-utils.init_cache( 300 )
+import threading
+
+utils.init_cache(300)
 
 HOST = '127.0.0.1'  # IP do servidor
 SERVER_PORT = 5000  # Porta onde o servidor está escutando
@@ -24,14 +26,12 @@ def get_user_information(user):
     :param user:
     :return 'USER_INFORMATION' + ' ' + user_id:
     """
-    # user_tup = utils.get_user_information( user )
-    # if user_tup is None:
-    #     return 'USER UNKNOWN'
-    
-    # name , premium = user_tup
-    # return 'USER_INFORMATION {} {}'.format( name , bool( premium ))
+    user_tup = utils.get_user_information(user)
+    if user_tup is None:
+        return 'USER_UNKNOWN'
 
-    return 'USER_INFORMATION' + ' ' + 'user_id'
+    name, premium = user_tup
+    return f'USER_INFORMATION {name} {bool(premium)}'
 
 
 def login(user):
@@ -42,21 +42,30 @@ def login(user):
     :param user:
     :return 'STATUS_DO_USUARIO' + ' ' + user_id || 'ENTRAR_NA_APP_ACK'  :
     """
+    print(user)
+    user_tup = utils.get_user_information(user)
+    if user_tup is None:
+        utils.add_user(user)
+        return 'ENTRAR_NA_APP_ACK'
 
-    # user_tup = utils.get_user_information( user )
-    # if user_tup is None:
-    #     utils.add_user( user )
-    #     return 'ENTRAR_NA_APP_ACK'
-    
-    # name , premium = user_tup
-    # return 'STATUS_DO_USUARIO {} {}'.format( name , bool( premium ))
+    name, premium = user_tup
+    return f'STATUS_DO_USUARIO nome:{name} premium?{bool(premium)}'
 
-    return 'STATUS_DO_USUARIO' + ' ' + 'user_id'
+
+def threaded_server(host, port):
+    while True:
+        print("Esperando conexao...")
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((host, port))
+        s.listen()
+        conn, ip = s.accept()
+        print('GOT CONNECTION FROM:', ip)
+        thread = threading.Thread(target=connection_manager, args=(conn,))
+        thread.start()
 
 
 def connection_manager(conn):
-
-    with conn:
+    while conn:
         data_byte = conn.recv(1024)
         data_string = data_byte.decode()
         data = data_string.split(" ")
@@ -65,37 +74,18 @@ def connection_manager(conn):
             message = get_user_information(data[1])
         elif data[0] == 'ENTRAR_NA_APP':
             message = login(data[1])
-        elif data[0] == 'SAIT_DA_APP':
+        elif data[0] == 'SAIR_DA_APP':
             message = logout(data[1])
 
         conn.sendall(message.encode())
 
+
 def main():
+    stream_thread = threading.Thread(target=threaded_server, args=(STREAM_HOST, STREAM_PORT))
+    stream_thread.start()
+    client_thread = threading.Thread(target=threaded_server, args=(HOST, SERVER_PORT))
+    client_thread.start()
 
-    # Cria o soquete do servidor com o streaming e comeca a ouvir
-    server_stream_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_stream_socket.bind((HOST, STREAM_PORT))
-    server_stream_socket.listen()
-    print("Esperando conexão o Streaming...")
-
-    # Aceita a conexao com o streaming
-    stream_connection, stream_ip = server_stream_socket.accept()
-    print('GOT CONNECTION FROM:', stream_ip)
-
-    # Cria o soquete para os clientes e comeca a ouvir
-    server_client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_client_socket.bind((HOST, SERVER_PORT))
-    server_client_socket.listen()
-    print('Esperando conexão do cliente...')
-
-
-    # Aceita uma conexao com o cliente
-    while True:
-        client_connection, client_ip = server_client_socket.accept()
-        print('GOT CONNECTION FROM:', client_ip)
-        connection_manager(client_connection)
-
-        connection_manager(stream_connection)
 
 if __name__ == "__main__":
     main()
