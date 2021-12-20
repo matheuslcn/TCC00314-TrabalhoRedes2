@@ -55,9 +55,7 @@ def threaded_client(message):
 
     if data[0] == 'LISTAR_VIDEOS':
         message = list_videos()
-        print(f"mandando a lista de videos para o {client_addr}")
         stream_client_socket.sendto(message.encode(), client_addr)
-        print("lista enviada")
     if data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
         is_premium = server_connection(message_to_server)

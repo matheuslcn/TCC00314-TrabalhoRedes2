@@ -15,7 +15,6 @@ def login():
     faz o login do usuario no servico
     :return:
     """
-    print("login\n")
     client_streaming_socket.sendto('LISTAR_VIDEOS'.encode(), (STREAM_HOST, STREAM_PORT))
 
 
@@ -33,7 +32,6 @@ def status(user):
     mostra na tela as informacoes recebidas do usuario
     :return:
     """
-    print("status\n")
     login()
 
 
@@ -42,12 +40,11 @@ def video_list(videos):
     lista os videos recebidos do servidor de streaming
     :return:
     """
-    print("video_list\n")
     print(videos)
     return
 
 
-def tcp_connection():
+def tcp_message():
     while True:
         data_byte = client_server_socket.recv(1024)
         data_string = data_byte.decode()
@@ -62,12 +59,10 @@ def tcp_connection():
             client_streaming_socket.close()
 
 
-def udp_connection():
+def udp_message():
     while True:
-        print("esperando mensagem do streaming...")
-        m = client_server_socket.recvfrom(1024)
-        print("chegou mensagem do streaming!")
-        data_byte = m[0]
+        stream_message = client_streaming_socket.recvfrom(1024)
+        data_byte = stream_message[0]
         data_string = data_byte.decode()
         data = data_string.split(' ')
         if data[0] == 'LISTA_DE_VIDEOS':
@@ -79,17 +74,16 @@ if __name__ == "__main__":
     client_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_server_socket.bind((LOCAL_HOST, CLIENT_TCP_PORT))
     client_server_socket.connect((SERVER_HOST, SERVER_PORT))
+    username = input("digite o usuario:")
+    message = f'ENTRAR_NA_APP {username} {socket.gethostname()}'
+    client_server_socket.sendall(message.encode())
+    server_conn = threading.Thread(target=tcp_message)
+    server_conn.start()
 
-    # Criacao do soquete de comunicacao com o streaming
+    # Criacao e conexao do soquete de comunicacao com o streaming
     client_streaming_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client_streaming_socket.bind((LOCAL_HOST, CLIENT_UDP_PORT))
-
-    # Tentativa de login
-    username = input("digite o usuario:")
-    message = 'ENTRAR_NA_APP' + ' ' + username + ' ' + 'ip'  # Estou usando ' ' como separador dos arqgumentos
-    client_server_socket.sendall(message.encode())
-
-    server_conn = threading.Thread(target=tcp_connection)
-    streaming_conn = threading.Thread(target=udp_connection)
-    server_conn.start()
+    streaming_conn = threading.Thread(target=udp_message)
     streaming_conn.start()
+
+
