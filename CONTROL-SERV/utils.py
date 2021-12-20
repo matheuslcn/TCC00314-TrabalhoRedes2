@@ -1,10 +1,10 @@
-from socket import *
+# from socket import *
 from collections import namedtuple
 import time
 import random
 from string import ascii_lowercase
 
-import pandas
+# import pandas
 import sqlalchemy as sql
 
 # -------------------------------------------------------------------------
