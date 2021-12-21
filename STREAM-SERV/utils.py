@@ -68,3 +68,15 @@ def fetch_video( video_name , quality ):
         
         file_name = get_file_name( db_tup.name , quality , db_tup.file )
         return open( file_name , 'rb')
+
+def list_all_videos():
+
+    engine = sql.create_engine( 'sqlite:///STREAM-SERV/streaming.db')
+    with engine.connect() as conn:
+
+        seq = conn.execute( "SELECT name FROM video" )
+        if seq is None:
+            return
+        
+        for row in seq:
+            yield row
