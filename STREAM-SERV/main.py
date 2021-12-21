@@ -1,6 +1,8 @@
 import socket
 import threading
 import utils
+import cv2
+import imutils
 
 HOST = '127.0.0.1'  # IP do servidor de streaming (localhost)
 SERVER_PORT = 5555  # Porta do servidor com o streaming
@@ -25,20 +27,37 @@ def get_user_information(user):
     return f'GET_USER_INFORMATION {user}'
 
 
-def play_video(user_ip, video_name, quality, is_premium):
-    if is_premium:
-        """
+def play_video(user_addr, video_name, quality, is_premium):
+    # if is_premium:
+    """
         Deve transmitir o video e mostrar a mensagem:
         “REPRODUZINDO O VÍDEO <<NOME DO VÍDEO>>, COM RESOLUÇÃO <<NOMENCLATURA DA RESOLUÇÃO>>”.
-        """
-        video = utils.fetch_video(video_name, quality)
-        print(f"REPRODUZINDO O VÍDEO {video_name}, COM RESOLUÇÃO {quality}")
-    else:
+    """
+    video = utils.fetch_video(video_name, quality)
+    if not video:
+        return "ERROR video nao encontrado"
+    vid = cv2.VideoCapture(video)
+
+    print(f"REPRODUZINDO O VÍDEO {video_name}, COM RESOLUÇÃO {quality}")
+
+    while vid.isOpened():
+        img, frame = vid.read()
+        if not img:
+            print("Nao tem mais nenhum frame, video acabou.")
+            break
+        resized_frame = imutils.resize(frame, width=quality)
+        try:
+            stream_client_socket.sendto(resized_frame, user_addr)
+        except Exception as e:
+            print(e)
+            raise Exception(e)
+
+        # else:
         """
         Deve mostrar a mensagem:
         "NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO."
         """
-        print("NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO.")
+        # print("NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO.")
 
     return
 
@@ -59,7 +78,9 @@ def server_connection(message):
     :return:
     """
     stream_server_socket.sendall(message.encode())
+    print(f"{message} enviado para o servidor de gerenciamento")
     data_byte = stream_server_socket.recv(1024)
+    print(f"{data_byte} recebido do servidor de gerenciamento")
     data_string = data_byte.decode()
     data = data_string.split(' ')
     if data[0] == 'USER_INFORMATION':
@@ -81,6 +102,7 @@ def threaded_client(message):
     if data[0] == 'LISTAR_VIDEOS':
         message = list_videos()
         stream_client_socket.sendto(message.encode(), client_addr)
+        print(f"{message} enviado para o cliente {client_addr}")
     elif data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
         is_premium = server_connection(message_to_server)
@@ -98,7 +120,8 @@ def client_connection():
     """
     while stream_client_socket:
         client_message = stream_client_socket.recvfrom(1024)
-        client_thread = threading.Thread(target=threaded_client, args=(client_message, ))
+        print(f"{client_message[0]} recebida do cliente {client_message[1]}")
+        client_thread = threading.Thread(target=threaded_client, args=(client_message,))
         client_thread.start()
 
 

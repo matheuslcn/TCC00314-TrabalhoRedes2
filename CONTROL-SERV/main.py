@@ -26,7 +26,7 @@ def get_user_information(user):
     :return 'USER_INFORMATION {user} {boll(premium)}':
     """
     user_tup = utils.get_user_information(user)
-    if user_tup is None:
+    if not user_tup:
         return 'USER_UNKNOWN'
 
     name, premium = user_tup
@@ -43,7 +43,7 @@ def login(user):
     """
     print(user)
     user_tup = utils.get_user_information(user)
-    if user_tup is None:
+    if not user_tup:
         utils.add_user(user)
         return 'ENTRAR_NA_APP_ACK'
 
@@ -78,6 +78,7 @@ def threaded_client(conn):
     """
     while conn:
         data_byte = conn.recv(1024)
+        print(f"{data_byte} recebido de um cliente")
         data_string = data_byte.decode()
         data = data_string.split(" ")
 
@@ -91,6 +92,7 @@ def threaded_client(conn):
             print("Mensagem invalida")
             continue
         conn.sendall(message.encode())
+        print(f"{message} enviada para um cliente")
 
 
 def main():

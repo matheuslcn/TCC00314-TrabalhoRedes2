@@ -16,6 +16,7 @@ def login():
     :return:
     """
     client_streaming_socket.sendto('LISTAR_VIDEOS'.encode(), (STREAM_HOST, STREAM_PORT))
+    print(f"LISTAR_VIDEOS enviado para o servidor de streaming")
 
 
 def sign_in():
@@ -51,6 +52,7 @@ def tcp_message():
     """
     while client_server_socket:
         data_byte = client_server_socket.recv(1024)
+        print(f"{data_byte} recebido do servidor de gerenciamento")
         data_string = data_byte.decode()
         data = data_string.split(' ')
 
@@ -61,6 +63,7 @@ def tcp_message():
         elif data[0] == 'SAIR_DA_APP_ACK':
             client_server_socket.close()
             client_streaming_socket.close()
+            print("deslogado")
 
 
 def udp_message():
@@ -70,11 +73,17 @@ def udp_message():
     """
     while client_streaming_socket:
         stream_message = client_streaming_socket.recvfrom(1024)
+        print(f"{stream_message[0]} recebida do servidor de streaming")
         data_byte = stream_message[0]
         data_string = data_byte.decode()
         data = data_string.split(' ')
         if data[0] == 'LISTA_DE_VIDEOS':
             video_list(data[1])
+
+
+def upload_video(video):
+    print(video)
+    return
 
 
 if __name__ == "__main__":
@@ -95,14 +104,18 @@ if __name__ == "__main__":
     username = input("digite o usuario:")
     message = f'ENTRAR_NA_APP {username} {socket.gethostname()}'
     client_server_socket.sendall(message.encode())
+    print(f"{message} enviada para o servidor de gerenciamento")
 
     while True:
-        action = input("digite 1 para ver um video ou 2 para sair: ")
-        if action == "1":
+        action = input("digite 1 para ver um video, 2 para adicionar um video ou 0 para sair: ")
+        if action == 1:
             video_name = input("digite o nome do video que deseja assistir: ")
             quality = input("digite a qualidade do video: ")
             client_streaming_socket.sendto(f'REPRODUZIR_VIDEO {username} {video_name} {quality}'.encode(),
                                            (STREAM_HOST, STREAM_PORT))
-        elif action == "2":
+        elif action == 0:
             client_server_socket.sendall('SAIR_DA_APP'.encode())
             break
+        elif action == 2:
+            video_path = input("digite o caminho onde o video esta: ")
+            upload_video(video_path)
