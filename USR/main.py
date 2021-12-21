@@ -1,18 +1,18 @@
 import socket
 import threading
 
-LOCAL_HOST = '127.0.0.1'    # localhost
-SERVER_HOST = '127.0.0.1'   # IP do servidor
-STREAM_HOST = '127.0.0.1'   # IP do stream
+LOCAL_HOST = '127.0.0.1'  # localhost
+SERVER_HOST = '127.0.0.1'  # IP do servidor
+STREAM_HOST = '127.0.0.1'  # IP do stream
 CLIENT_TCP_PORT = 6060  # Porta do cliente
 CLIENT_UDP_PORT = 5001  # Porta onde o cliente vai se comunicar com o servidor de streaming
-SERVER_PORT = 5000      # Porta usada pelo servidor
-STREAM_PORT = 6000      # Porta usada pelo servidor de streaming
+SERVER_PORT = 5000  # Porta usada pelo servidor
+STREAM_PORT = 6000  # Porta usada pelo servidor de streaming
 
 
 def login():
     """
-    faz o login do usuario no servico
+    faz o login do usuario no servico e pede a lista de videos ao servidor de streaming
     :return:
     """
     client_streaming_socket.sendto('LISTAR_VIDEOS'.encode(), (STREAM_HOST, STREAM_PORT))
@@ -27,7 +27,7 @@ def sign_in():
     login()
 
 
-def status(user):
+def status(user, is_premium):
     """
     mostra na tela as informacoes recebidas do usuario
     :return:
@@ -45,7 +45,11 @@ def video_list(videos):
 
 
 def tcp_message():
-    while True:
+    """
+    É a função responsável pelo recebimento e processamento de mensagens do servidor de gerenciamento
+    :return:
+    """
+    while client_server_socket:
         data_byte = client_server_socket.recv(1024)
         data_string = data_byte.decode()
         data = data_string.split(' ')
@@ -53,14 +57,18 @@ def tcp_message():
         if data[0] == 'ENTRAR_NA_APP_ACK':
             sign_in()
         elif data[0] == 'STATUS_DO_USUARIO':
-            status(data[1])
+            status(data[1], data[2])
         elif data[0] == 'SAIR_DA_APP_ACK':
             client_server_socket.close()
             client_streaming_socket.close()
 
 
 def udp_message():
-    while True:
+    """
+    É a função responsável pelo recebimento e processamento de mensagens do servidor de streaming
+    :return:
+    """
+    while client_streaming_socket:
         stream_message = client_streaming_socket.recvfrom(1024)
         data_byte = stream_message[0]
         data_string = data_byte.decode()
@@ -74,16 +82,27 @@ if __name__ == "__main__":
     client_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_server_socket.bind((LOCAL_HOST, CLIENT_TCP_PORT))
     client_server_socket.connect((SERVER_HOST, SERVER_PORT))
-    username = input("digite o usuario:")
-    message = f'ENTRAR_NA_APP {username} {socket.gethostname()}'
-    client_server_socket.sendall(message.encode())
-    server_conn = threading.Thread(target=tcp_message)
+    server_conn = threading.Thread(target=tcp_message)  # Cria uma thread para a conexao com o servidor gerenciador
     server_conn.start()
 
     # Criacao e conexao do soquete de comunicacao com o streaming
     client_streaming_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client_streaming_socket.bind((LOCAL_HOST, CLIENT_UDP_PORT))
-    streaming_conn = threading.Thread(target=udp_message)
+    streaming_conn = threading.Thread(target=udp_message)  # Cria uma thread para a conexao com o servidor de streaming
     streaming_conn.start()
 
+    # login do usuario
+    username = input("digite o usuario:")
+    message = f'ENTRAR_NA_APP {username} {socket.gethostname()}'
+    client_server_socket.sendall(message.encode())
 
+    while True:
+        action = input("digite 1 para ver um video ou 2 para sair: ")
+        if action == "1":
+            video_name = input("digite o nome do video que deseja assistir: ")
+            quality = input("digite a qualidade do video: ")
+            client_streaming_socket.sendto(f'REPRODUZIR_VIDEO {username} {video_name} {quality}'.encode(),
+                                           (STREAM_HOST, STREAM_PORT))
+        elif action == "2":
+            client_server_socket.sendall('SAIR_DA_APP'.encode())
+            break
