@@ -3,6 +3,11 @@ import threading
 import utils
 import cv2
 import imutils
+import pickle
+import pyaudio
+import time
+import wave
+import moviepy.editor as mp
 
 HOST = '127.0.0.1'  # IP do servidor de streaming (localhost)
 SERVER_PORT = 5555  # Porta do servidor com o streaming
@@ -15,7 +20,8 @@ def list_videos():
     e uma lista com os nomes dos videos
     :returnf'LISTA_DE_VIDEOS lista_dos_videos_para_reproducao':
     """
-    return f'LISTA_DE_VIDEOS lista_dos_videos_para_reproducao'
+    videos = utils.list_all_videos()
+    return f'LISTA_DE_VIDEOS {videos}'
 
 
 def get_user_information(user):
@@ -27,38 +33,78 @@ def get_user_information(user):
     return f'GET_USER_INFORMATION {user}'
 
 
-def play_video(user_addr, video_name, quality, is_premium):
-    # if is_premium:
-    """
+def send_video(video_name, client_addr):
+    cap = cv2.VideoCapture(video_name)
+    fps = (cap.get(cv2.CAP_PROP_FPS))
+    print(f"video fr {fps}")
+    while cap.isOpened():
+        begin = time.time()
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Can't receive more frames.")
+            break
+
+        frame = imutils.resize(frame, width=720)
+        _, buffer = cv2.imencode('.jpeg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        pframe = pickle.dumps(buffer)
+        stream_client_socket.sendto(pframe, client_addr)
+
+        diff_time = time.time() - begin
+        if diff_time < 0.5/fps:
+            time.sleep((0.5/fps) - diff_time)
+
+    stream_client_socket.sendto(b'END_OF_VIDEO', client_addr)
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+def send_audio(audio, client):
+    wf = wave.open(audio, 'rb')
+    print(f"audio fr {wf.getframerate()}")
+    # instantiate PyAudio (1)
+    p = pyaudio.PyAudio()
+
+    # open stream (2)
+    stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
+                    channels=wf.getnchannels(),
+                    rate=wf.getframerate(),
+                    output=True,
+                    frames_per_buffer=1024)
+
+    # read data
+    data = wf.readframes(1024)
+    while len(data) > 0:
+        p_data = pickle.dumps(data)
+        stream_client_socket.sendto(p_data, (client[0], client[1]-1))
+        stream.write(data)
+        data = wf.readframes(1024)
+    stream_client_socket.sendto(b'END_OF_AUDIO', (client[0], client[1]-1))
+    # stop stream (4)
+    stream.close()
+
+    # close PyAudio (5)
+    p.terminate()
+
+
+def send_audio_video(client_addr, video_name, quality, is_premium):
+    if is_premium:
+        """
         Deve transmitir o video e mostrar a mensagem:
         “REPRODUZINDO O VÍDEO <<NOME DO VÍDEO>>, COM RESOLUÇÃO <<NOMENCLATURA DA RESOLUÇÃO>>”.
-    """
-    video = utils.fetch_video(video_name, quality)
-    if not video:
-        return "ERROR video nao encontrado"
-    vid = cv2.VideoCapture(video)
-
-    print(f"REPRODUZINDO O VÍDEO {video_name}, COM RESOLUÇÃO {quality}")
-
-    while vid.isOpened():
-        img, frame = vid.read()
-        if not img:
-            print("Nao tem mais nenhum frame, video acabou.")
-            break
-        resized_frame = imutils.resize(frame, width=quality)
-        try:
-            stream_client_socket.sendto(resized_frame, user_addr)
-        except Exception as e:
-            print(e)
-            raise Exception(e)
-
-        # else:
         """
-        Deve mostrar a mensagem:
+        video_path = f'video_fls/{video_name}/{quality}.mp4'
+        audio_path = f'video_fls/{video_name}/audio.wav'
+        video_thread = threading.Thread(target=send_video, args=(video_path, client_addr))
+        audio_thread = threading.Thread(target=send_audio, args=(audio_path, client_addr))
+        video_thread.start()
+        audio_thread.start()
+
+    else:
+        """
+         Deve mostrar a mensagem:
         "NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO."
         """
-        # print("NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO.")
-
     return
 
 
@@ -106,7 +152,7 @@ def threaded_client(message):
     elif data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
         is_premium = server_connection(message_to_server)
-        play_video(client_addr, data[2], data[3], is_premium)
+        send_video(client_addr, data[2], data[3], is_premium)
     elif data[0] == 'PARAR_STREAMING':
         stop_streaming(client_addr)
     else:
@@ -136,4 +182,5 @@ if __name__ == "__main__":
     stream_client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     stream_client_socket.bind((HOST, STREAM_PORT))
     print("Esperando mensagens dos clientes...")
+
     client_connection()

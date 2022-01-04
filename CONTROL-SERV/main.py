@@ -88,6 +88,10 @@ def threaded_client(conn):
             message = login(data[1])
         elif data[0] == 'SAIR_DA_APP':
             message = logout()
+            conn.sendall(message.encode())
+            print(f"{message} enviada para um cliente")
+            conn.close()
+            break
         else:
             print("Mensagem invalida")
             continue
