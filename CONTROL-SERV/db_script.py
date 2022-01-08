@@ -38,10 +38,9 @@ if __name__ == "__main__":
         conn.execute( sql.text(
             '''
             CREATE TABLE "group"(
-                "name" TEXT NOT NULL,
                 "owner" TEXT NOT NULL,
 
-                PRIMARY KEY ("name"),
+                PRIMARY KEY ("owner"),
 
                 FOREIGN KEY ("owner") REFERENCES "user"("name")
                 ON DELETE CASCADE
@@ -56,18 +55,17 @@ if __name__ == "__main__":
             CREATE TABLE "membership"(
 
                 "name"   TEXT NOT NULL,
-                "u_name" TEXT NOT NULL,
-                "g_name" TEXT NOT NULL,
+                "owner"  TEXT NOT NULL,
 
-                PRIMARY KEY ("name"),
+                PRIMARY KEY ("name","owner"),
 
-                FOREIGN KEY ("u_name") REFERENCES  "user"("name")
+                FOREIGN KEY ("name") REFERENCES  "user"("name")
                 ON DELETE CASCADE,
 
-                FOREIGN KEY ("g_name") REFERENCES "group"("name")
+                FOREIGN KEY ("owner") REFERENCES "group"("owner")
                 ON DELETE CASCADE
             );
             '''
         ) )
 
-        conn.commit()
+        # conn.commit()
