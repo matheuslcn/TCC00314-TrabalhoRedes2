@@ -127,7 +127,7 @@ def ver_grupo( owner_name ):
     if not ( is_user_premium( owner_name ) and is_group_owner( owner_name ) ):
         return ""
     
-    s = "SELECT user FROM \"membership\" WHERE owner = \"{}\"".format( owner )
+    s = "SELECT user FROM \"membership\" WHERE owner = \"{}\"".format( owner_name )
     seq = conn.execute( sql.text( s ) )
     return "\n".join( x for x in seq )
 
