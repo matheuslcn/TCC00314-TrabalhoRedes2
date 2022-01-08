@@ -8,6 +8,7 @@ from typing import Text
 # import pandas
 import sqlalchemy as sql
 from sqlalchemy import Table, Column, MetaData
+from sqlalchemy.sql.expression import null
 
 # def print_memo( fun ):
 
@@ -84,58 +85,49 @@ def is_user_premium( user_name ):
     
     return bool( fetch_user( user_name ).premium )
 
-def criar_grupo( user_name , group_name ):
+def criar_grupo( user_name ):
     
     if not is_user_premium( user_name ):
         return "CRIAR_GRUPO_NACK"
 
     s1 = "INSERT INTO \"group\" ( owner ) VALUES ( \"{}\" )".format( user_name )
-    s2 = "INSERT INTO \"membership\" ( user , group ) VALUES ( \"{}\" ,\"{}\" )".format( user_name , group_name )
+    s2 = "INSERT INTO \"membership\" ( user , group ) VALUES ( \"{}\" ,\"{}\" )".format( user_name , user_name )
 
     for s in [ s1 , s2 ]:
         conn.execute( sql.text( s ) )
 
     return "CRIAR_GRUPO_ACK"
 
-# def is_group_owner( owner_name , group_name ):
+def is_group_owner( user_name ):
     
-#     with engine.connect() as conn:
+    s1 = "SELECT * FROM \"group\" WHERE owner = \"{}\"".format( user_name )
+    seq = conn.execute( sql.text( s1 ) )
+    return seq.first is not None
 
-#         s1 = "SELECT * FROM \"group\" WHERE name = {}".format( group_name )
-#         seq = conn.execute( sql.text( s1 ) )
-#         if not seq:
-#             return False
-        
-#         return seq.first().owner == owner_name
+def add_grupo( owner_name, user_name ):
+    
+    if not ( is_user_premium( owner_name ) and is_group_owner( owner_name ) ):
+        return "ADD_USER_GRUPO_NACK"
+    
+    s = "INSERT INTO \"membership\" ( user , group ) VALUES ( \"{}\" ,\"{}\" )".format( user_name , owner_name )
+    conn.execute( sql.text( s ) )
+    return "ADD_USER_GROUP_ACK"
 
-# def add_grupo( owner_name, group_name, user_name ):
+def remover_usr_grupo( owner_name, user_name ):
     
-#     if not ( is_user_premium( owner_name ) and is_group_owner( owner_name , group_name ) ):
-#         return "ADD_USER_GRUPO_NACK"
+    if not ( is_user_premium( owner_name ) and is_group_owner( owner_name ) ):
+        return "RMV_USER_GRUPO_NACK"
     
-#     with engine.connect() as conn:
-#         s = "INSERT INTO \"membership\" ( user , group ) VALUES ( \"{}\" ,\"{}\" )".format( user_name , group_name )
-#         conn.execute( sql.text( s ) )
-#     return "ADD_USER_GROUP_ACK"
+    s = "DELETE FROM \"membership\" WHERE user = \"{}\"".format( user_name )
+    conn.execute( sql.text( s ) )
+    return "RMV_USER_GRUPO_ACK"
 
-# def remover_usr_grupo( owner_name, group_name, user_name ):
+def ver_grupo( owner_name ):
     
-#     if not ( is_user_premium( owner_name ) and is_group_owner( owner_name , group_name ) ):
-#         return "RMV_USER_GRUPO_NACK"
+    if not ( is_user_premium( owner_name ) and is_group_owner( owner_name ) ):
+        return ""
     
-#     with engine.connect() as conn:
-#         s = "DELETE FROM \"membership\" WHERE user = \"{}\"".format( user_name )
-#         conn.execute( sql.text( s ) )
-
-#     return "RMV_USER_GRUPO_ACK"
-
-# def ver_grupo( owner_name, group_name ):
-    
-#     if not ( is_user_premium( owner_name ) and is_group_owner( owner_name , group_name ) ):
-#         return ""
-    
-#     with engine.connect as conn:
-#         s = "SELECT user FROM \"membership\" WHERE name = \"{}\"".format( group_name )
-#         seq = conn.execute( sql.text( s ) )
-#         return "\n".join( x for x in seq )
+    s = "SELECT user FROM \"membership\" WHERE owner = \"{}\"".format( owner )
+    seq = conn.execute( sql.text( s ) )
+    return "\n".join( x for x in seq )
 
