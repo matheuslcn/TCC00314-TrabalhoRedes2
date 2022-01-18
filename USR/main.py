@@ -1,7 +1,7 @@
 import tkinter as tk
 from USR.assets.colors import white_color
 from USR.screens.login import login_widget
-from USR.widget.header import header_widget
+from USR.widgets.header import header_widget
 
 
 if __name__ == "__main__":

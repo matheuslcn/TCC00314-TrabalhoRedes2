@@ -2,38 +2,29 @@ import socket
 import utils
 import threading
 
-utils.init_cache(300)
 
 HOST = '127.0.0.1'          # IP do servidor
 SERVER_PORT = 5000          # Porta onde o servidor está escutando
 STREAM_HOST = '127.0.0.1'   # IP do servidor de streaming
 STREAM_PORT = 5555          # Porta do servidor com o streaming
 
+def init_logs():
 
-def logout():
+    global logged_users
+    logged_users = set()
+
+def logout( user_name ):
     """
     desloga o usuario
     :param user:
     :return 'SAIR_DA_APP_ACK':
     """
+
+    logged_users.remove( user_name )
     return 'SAIR_DA_APP_ACK'
 
+def login( user_name ):
 
-def get_user_information(user):
-    """
-    Pega todas as informacoes do usuario e envia para o servidor de streaming
-    :param user:
-    :return 'USER_INFORMATION {user} {boll(premium)}':
-    """
-    user_tup = utils.get_user_information(user)
-    if user_tup is None:
-        return 'USER_UNKNOWN'
-
-    name, premium = user_tup
-    return f'USER_INFORMATION {name} {bool(premium)}'
-
-
-def login(user):
     """
     Se achar o usuario no bd, manda a mensagem 'STATUS_DO_USUARIO',
         informando ID, tipo de servico e membros do grupo.
@@ -41,14 +32,19 @@ def login(user):
     :param user:
     :return 'STATUS_DO_USUARIO {user} {bool(premium)}' ou 'ENTRAR_NA_APP_ACK'  :
     """
-    print(user)
-    user_tup = utils.get_user_information(user)
-    if user_tup is None:
-        utils.add_user(user)
-        return 'ENTRAR_NA_APP_ACK'
+    if user_name in logged_users:
+        return 'USUARIO_JA_LOGADO'
+    logged_users.add( user_name )
+    return utils.entrar_na_app( user_name )
 
-    name, premium = user_tup
-    return f'STATUS_DO_USUARIO {name} {bool(premium)}'
+def get_user_information( user_name ):
+    """
+    Pega todas as informacoes do usuario e envia para o servidor de streaming
+    :param user:
+    :return 'USER_INFORMATION {user} {boll(premium)}':
+    """
+    return utils.get_user_information( user_name )
+    
 
 
 def create_connection(host, port):
@@ -76,21 +72,44 @@ def threaded_client(conn):
     :param conn:
     :return:
     """
+    
+    client_name = ''
     while conn:
         data_byte = conn.recv(1024)
         data_string = data_byte.decode()
         data = data_string.split(" ")
 
-        if data[0] == 'GET_USER_INFORMATION':
+        msg = data[0]
+
+        if   msg == 'GET_USER_INFORMATION':
             message = get_user_information(data[1])
-        elif data[0] == 'ENTRAR_NA_APP':
+
+        elif msg == 'ENTRAR_NA_APP':
             message = login(data[1])
-        elif data[0] == 'SAIR_DA_APP':
-            message = logout()
+            client_name = data[1]
+
+        elif msg == 'SAIR_DA_APP':
+            message = logout( client_name )
+        
+        elif msg == 'CRIAR_GRUPO':
+            message = utils.criar_grupo( client_name )
+        
+        elif msg == 'ADD_USUARIO_GRUPO':
+            message = utils.add_grupo( client_name , data[ 1 ] )
+        
+        elif msg == 'REMOVER_USUARIO_GRUPO':
+            message = utils.remover_usr_grupo( client_name , data[ 1 ] )
+        
+        elif msg == 'VER_GRUPO':
+            message = utils.ver_grupo( client_name )
+
         else:
             print("Mensagem invalida")
             continue
         conn.sendall(message.encode())
+
+        if msg == 'SAIR_DA_APP':
+            return
 
 
 def main():
@@ -99,6 +118,8 @@ def main():
     e outra para a conexao com os clientes
     :return:
     """
+
+    utils.init_db_engine()
     stream_thread = threading.Thread(target=create_connection, args=(STREAM_HOST, STREAM_PORT))
     stream_thread.start()
     client_thread = threading.Thread(target=create_connection, args=(HOST, SERVER_PORT))

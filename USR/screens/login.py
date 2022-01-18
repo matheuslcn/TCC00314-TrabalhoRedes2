@@ -2,7 +2,7 @@ import tkinter as tk
 
 from USR.assets.colors import white_color, dark_blue_color, gray_color, text_color
 from USR.screens.list_videos import list_videos
-from USR.widget.header import header_widget
+from USR.widgets.header import header_widget
 
 
 def action_btn(text, login_frame):
