@@ -2,7 +2,6 @@ import socket
 import utils
 import threading
 
-utils.init_cache(300)
 
 HOST = '127.0.0.1'          # IP do servidor
 SERVER_PORT = 5000          # Porta onde o servidor está escutando
