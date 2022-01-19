@@ -54,13 +54,7 @@ def get_user_information( user_name ):
     s = "SELECT * FROM \"user\" WHERE name = \"{}\"".format( user_name )
     tup = conn.execute( sql.text( s ) ).first()
     
-    msg = '''
-    STATUS_DO_USUARIO
-
-    NOME    = {}
-    PREMIUM = {}
-
-    '''.format( user_name , bool( tup.premium ) )
+    msg = "STATUS DO USUARIO {} {}".format( user_name , bool( tup.premium ) )
 
     return msg
 

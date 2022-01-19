@@ -8,10 +8,10 @@ SERVER_PORT = 5000          # Porta onde o servidor está escutando
 STREAM_HOST = '127.0.0.1'   # IP do servidor de streaming
 STREAM_PORT = 5555          # Porta do servidor com o streaming
 
-def init_logs():
+# def init_logs():
 
-    global logged_users
-    logged_users = set()
+#     global logged_users
+#     logged_users = set()
 
 def logout( user_name ):
     """
@@ -20,7 +20,7 @@ def logout( user_name ):
     :return 'SAIR_DA_APP_ACK':
     """
 
-    logged_users.remove( user_name )
+    # logged_users.remove( user_name )
     return 'SAIR_DA_APP_ACK'
 
 def login( user_name ):
@@ -32,9 +32,9 @@ def login( user_name ):
     :param user:
     :return 'STATUS_DO_USUARIO {user} {bool(premium)}' ou 'ENTRAR_NA_APP_ACK'  :
     """
-    if user_name in logged_users:
-        return 'USUARIO_JA_LOGADO'
-    logged_users.add( user_name )
+    # if user_name in logged_users:
+    #     return 'USUARIO_JA_LOGADO'
+    # logged_users.add( user_name )
     return utils.entrar_na_app( user_name )
 
 def get_user_information( user_name ):
