@@ -1,5 +1,11 @@
 import socket
+import pickle
+import cv2
+import imutils
+import wave
+import pyaudio
 import threading
+import time
 import utils
 
 HOST = '127.0.0.1'  # IP do servidor de streaming (localhost)
@@ -25,27 +31,102 @@ def get_user_information(user):
     return f'GET_USER_INFORMATION {user}'
 
 
-def play_video(user_ip, video_name, quality, is_premium):
+def send_video(client_addr, video):
+    cap = cv2.VideoCapture(video)
+    fps = (cap.get(cv2.CAP_PROP_FPS))
+    print(f"video fr {fps}")
+    while cap.isOpened():
+        begin = time.time()
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Can't receive more frames.")
+            break
+
+        _, buffer = cv2.imencode('.jpeg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        pframe = pickle.dumps(buffer)
+        stream_client_socket.sendto(pframe, client_addr)
+
+        diff_time = time.time() - begin
+        if diff_time < 0.5 / fps:
+            time.sleep((0.5 / fps) - diff_time)
+
+    stream_client_socket.sendto(b'END_OF_VIDEO', client_addr)
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+def send_audio(audio, client):
+    wf = wave.open(audio, 'rb')
+    print(f"audio fr {wf.getframerate()}")
+    # instantiate PyAudio (1)
+    p = pyaudio.PyAudio()
+
+    # open stream (2)
+    stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
+                    channels=wf.getnchannels(),
+                    rate=wf.getframerate(),
+                    output=True,
+                    frames_per_buffer=1024)
+
+    # read data
+    data = wf.readframes(1024)
+    while len(data) > 0:
+        p_data = pickle.dumps(data)
+        stream_client_socket.sendto(p_data, (client[0], client[1] - 1))
+        stream.write(data)
+        data = wf.readframes(1024)
+    stream_client_socket.sendto(b'END_OF_AUDIO', (client[0], client[1] - 1))
+    # stop stream (4)
+    stream.close()
+
+    # close PyAudio (5)
+    p.terminate()
+
+
+def send_audio_video(client_addr, video_name, quality):
+    video_path = f'video_fls/{video_name}/{quality}.mp4'
+    audio_path = f'video_fls/{video_name}/audio.wav'
+    video_thread = threading.Thread(target=send_video, args=(video_path, client_addr))
+    audio_thread = threading.Thread(target=send_audio, args=(audio_path, client_addr))
+    video_thread.start()
+    audio_thread.start()
+
+
+def send_audio_video_one_person(client_addr, video_name, quality, is_premium):
     if is_premium:
         """
         Deve transmitir o video e mostrar a mensagem:
         “REPRODUZINDO O VÍDEO <<NOME DO VÍDEO>>, COM RESOLUÇÃO <<NOMENCLATURA DA RESOLUÇÃO>>”.
         """
-        video = utils.fetch_video(video_name, quality)
-        print(f"REPRODUZINDO O VÍDEO {video_name}, COM RESOLUÇÃO {quality}")
+        send_audio_video(client_addr, video_name, quality)
+
     else:
         """
-        Deve mostrar a mensagem:
+         Deve mostrar a mensagem:
         "NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO."
         """
-        print("NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO.")
-
     return
+
+
+def send_audio_video_group(group, video_name, quality):
+    for user in group:
+        thread = threading.Thread(target=send_audio_video, args=(user, video_name, quality))
+        thread.start()
 
 
 def stop_streaming(user_ip):
     """
-    deve parar o streaming do usuario
+    deve parar o streaming para o usuario
+    :param user_ip:
+    :return:
+    """
+    return
+
+
+def stop_group_streaming(user_ip):
+    """
+    deve parar o streaming para o grupo
     :param user_ip:
     :return:
     """
@@ -84,7 +165,7 @@ def threaded_client(message):
     elif data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
         is_premium = server_connection(message_to_server)
-        play_video(client_addr, data[2], data[3], is_premium)
+        send_audio_video_one_person(client_addr, data[2], data[3], is_premium)
     elif data[0] == 'PARAR_STREAMING':
         stop_streaming(client_addr)
     else:
@@ -98,7 +179,7 @@ def client_connection():
     """
     while stream_client_socket:
         client_message = stream_client_socket.recvfrom(1024)
-        client_thread = threading.Thread(target=threaded_client, args=(client_message, ))
+        client_thread = threading.Thread(target=threaded_client, args=(client_message,))
         client_thread.start()
 
 
