@@ -3,7 +3,6 @@ import threading
 import pickle
 import cv2
 import imutils
-import wave
 import pyaudio
 import time
 

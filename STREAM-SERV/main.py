@@ -109,10 +109,16 @@ def send_audio_video_one_person(client_addr, video_name, quality, is_premium):
     return
 
 
-def send_audio_video_group(group, video_name, quality):
-    for user in group:
-        thread = threading.Thread(target=send_audio_video, args=(user, video_name, quality))
-        thread.start()
+def send_audio_video_group(group, video_name, quality, isPremium):
+    if isPremium:
+        for user in group:
+            thread = threading.Thread(target=send_audio_video, args=(user, video_name, quality))
+            thread.start()
+    else:
+        """
+         Deve mostrar a mensagem:
+        "NÃO TEM PERMISSÃO PARA REPRODUZIR VÍDEOS, POR FAVOR MUDE SUA CLASSIFICAÇÃO."
+        """
 
 
 def stop_streaming(user_ip):
@@ -164,8 +170,12 @@ def threaded_client(message):
         stream_client_socket.sendto(message.encode(), client_addr)
     elif data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
-        is_premium = server_connection(message_to_server)
+        is_premium, _ = server_connection(message_to_server)
         send_audio_video_one_person(client_addr, data[2], data[3], is_premium)
+    elif data[0] == 'PLAY_VIDEO_TO_GROUP':
+        message_to_server = get_user_information(data[1])
+        is_premium, group_members = server_connection(message_to_server)
+        send_audio_video_group(group_members, data[2], data[3], is_premium)
     elif data[0] == 'PARAR_STREAMING':
         stop_streaming(client_addr)
     else:
