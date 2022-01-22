@@ -9,6 +9,7 @@ from typing import Text
 import sqlalchemy as sql
 from sqlalchemy import Table, Column, MetaData
 from sqlalchemy.sql.expression import null
+from sqlalchemy.pool import StaticPool
 
 # def print_memo( fun ):
 
@@ -23,11 +24,11 @@ from sqlalchemy.sql.expression import null
 def init_db_engine():
 
     global engine
-    engine = sql.create_engine('sqlite:///CONTROL-SERV/controle.db')
+    engine = sql.create_engine('sqlite:///CONTROL-SERV/controle.db', connect_args={'check_same_thread':False} , poolclass=StaticPool )
     # engine = sql.create_engine('sqlite:///controle.db')
 
     global conn
-    conn = engine.connect( check_same_thread = False )
+    conn = engine.connect()
 
 def fetch_user( user_name ):
 
