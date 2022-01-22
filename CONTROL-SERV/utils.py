@@ -23,11 +23,11 @@ from sqlalchemy.sql.expression import null
 def init_db_engine():
 
     global engine
-    # engine = sql.create_engine('sqlite:///CONTROL-SERV/controle.db')
-    engine = sql.create_engine('sqlite:///controle.db')
+    engine = sql.create_engine('sqlite:///CONTROL-SERV/controle.db')
+    # engine = sql.create_engine('sqlite:///controle.db')
 
     global conn
-    conn = engine.connect()
+    conn = engine.connect( check_same_thread = False )
 
 def fetch_user( user_name ):
 
