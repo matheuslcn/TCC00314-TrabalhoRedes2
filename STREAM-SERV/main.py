@@ -31,7 +31,7 @@ def get_user_information(user):
     return f'GET_USER_INFORMATION {user}'
 
 
-def send_video(client_addr, video):
+def send_video(video, client_addr):
     cap = cv2.VideoCapture(video)
     fps = (cap.get(cv2.CAP_PROP_FPS))
     print(f"video fr {fps}")
@@ -45,18 +45,19 @@ def send_video(client_addr, video):
 
         _, buffer = cv2.imencode('.jpeg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
         pframe = pickle.dumps(buffer)
-        stream_client_socket.sendto(pframe, client_addr)
+        stream_client_socket.sendto(pframe, (client_addr[0], client_addr[1] + 1))
 
         diff_time = time.time() - begin
-        if diff_time < 0.5 / fps:
-            time.sleep((0.5 / fps) - diff_time)
+        if diff_time < 1 / fps:
+            time.sleep((1 / fps) - diff_time)
 
-    stream_client_socket.sendto(b'END_OF_VIDEO', client_addr)
+    stream_client_socket.sendto(b'END_OF_VIDEO', (client_addr[0], client_addr[1] + 1))
     cap.release()
     cv2.destroyAllWindows()
 
 
 def send_audio(audio, client):
+    print(audio)
     wf = wave.open(audio, 'rb')
     print(f"audio fr {wf.getframerate()}")
     # instantiate PyAudio (1)
@@ -73,10 +74,10 @@ def send_audio(audio, client):
     data = wf.readframes(1024)
     while len(data) > 0:
         p_data = pickle.dumps(data)
-        stream_client_socket.sendto(p_data, (client[0], client[1] - 1))
+        stream_client_socket.sendto(p_data, (client[0], client[1] + 2))
         stream.write(data)
         data = wf.readframes(1024)
-    stream_client_socket.sendto(b'END_OF_AUDIO', (client[0], client[1] - 1))
+    stream_client_socket.sendto(b'END_OF_AUDIO', (client[0], client[1] + 2))
     # stop stream (4)
     stream.close()
 
@@ -85,8 +86,8 @@ def send_audio(audio, client):
 
 
 def send_audio_video(client_addr, video_name, quality):
-    video_path = f'video_fls/{video_name}/{quality}.mp4'
-    audio_path = f'video_fls/{video_name}/audio.wav'
+    video_path = f"STREAM-SERV/video_fls/{video_name}/{quality}.mp4"
+    audio_path = f"STREAM-SERV/video_fls/{video_name}/audio.wav"
     video_thread = threading.Thread(target=send_video, args=(video_path, client_addr))
     audio_thread = threading.Thread(target=send_audio, args=(audio_path, client_addr))
     video_thread.start()
@@ -94,7 +95,7 @@ def send_audio_video(client_addr, video_name, quality):
 
 
 def send_audio_video_one_person(client_addr, video_name, quality, is_premium):
-    if is_premium:
+    if not is_premium:
         """
         Deve transmitir o video e mostrar a mensagem:
         “REPRODUZINDO O VÍDEO <<NOME DO VÍDEO>>, COM RESOLUÇÃO <<NOMENCLATURA DA RESOLUÇÃO>>”.
@@ -170,7 +171,7 @@ def threaded_client(message):
         stream_client_socket.sendto(message.encode(), client_addr)
     elif data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
-        is_premium, _ = server_connection(message_to_server)
+        is_premium= server_connection(message_to_server)
         send_audio_video_one_person(client_addr, data[2], data[3], is_premium)
     elif data[0] == 'PLAY_VIDEO_TO_GROUP':
         message_to_server = get_user_information(data[1])
