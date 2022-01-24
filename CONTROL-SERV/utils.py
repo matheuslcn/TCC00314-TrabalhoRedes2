@@ -24,7 +24,8 @@ from sqlalchemy.pool import StaticPool
 
 def init_db_engine():
     global engine
-    engine = sql.create_engine('sqlite:///CONTROL-SERV/controle.db', connect_args={'check_same_thread':False} , poolclass=StaticPool )
+    engine = sql.create_engine('sqlite:///CONTROL-SERV/controle.db', connect_args={'check_same_thread': False},
+                               poolclass=StaticPool)
     # engine = sql.create_engine('sqlite:///controle.db')
 
     global conn
@@ -56,9 +57,9 @@ def get_user_information(user_name):
     s = "SELECT * FROM \"user\" WHERE name = \"{}\"".format(user_name)
     tup = conn.execute(sql.text(s)).first()
 
-    msg = "STATUS DO USUARIO {} {}".format(user_name, bool(tup.premium))
+    msg = "USER_INFORMATION {} {}".format(user_name, bool(tup.premium))
 
-    grupo = ver_grupo( user_name )
+    grupo = ver_grupo(user_name)
     if grupo != "":
         msg = msg + "\nGRUPO\n" + grupo
     return msg
@@ -125,13 +126,6 @@ def remover_usr_grupo(owner_name, user_name):
 def ver_grupo(owner_name):
     if not (is_user_premium(owner_name) and is_group_owner(owner_name)):
         return ""
-<<<<<<< HEAD
-=======
-    
-    s = "SELECT user FROM \"membership\" WHERE owner = \"{}\"".format( owner_name )
-    seq = conn.execute( sql.text( s ) )
-    return "\n".join( x.user for x in seq )
->>>>>>> 078a61e9f9dad277333f067fa1441e0b0ca607d1
 
     s = "SELECT user FROM \"membership\" WHERE owner = \"{}\"".format(owner_name)
     seq = conn.execute(sql.text(s))
