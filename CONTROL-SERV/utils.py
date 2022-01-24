@@ -57,6 +57,9 @@ def get_user_information( user_name ):
     
     msg = "STATUS DO USUARIO {} {}".format( user_name , bool( tup.premium ) )
 
+    grupo = ver_grupo( user_name )
+    if grupo != "":
+        msg = msg + "\nGRUPO\n" + grupo
     return msg
 
 def entrar_na_app( user_name ):
@@ -124,5 +127,5 @@ def ver_grupo( owner_name ):
     
     s = "SELECT user FROM \"membership\" WHERE owner = \"{}\"".format( owner_name )
     seq = conn.execute( sql.text( s ) )
-    return "\n".join( x for x in seq )
+    return "\n".join( x.user for x in seq )
 
