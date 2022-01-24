@@ -79,6 +79,8 @@ def udp_message():
         data = data_string.split(' ')
         if data[0] == 'LISTA_DE_VIDEOS':
             video_list(data[1])
+        if data[0] == 'UPLOAD_ACK':
+            upload_video(data[1])
 
 
 def play_video():
@@ -101,7 +103,7 @@ def play_video():
             break
         if cnt == frames_to_count:
             try:
-                fps = round(frames_to_count/(time.time()-st))
+                fps = round(frames_to_count / (time.time() - st))
                 st = time.time()
                 cnt = 0
             except:
@@ -119,10 +121,10 @@ def play_audio():
                     output=True,
                     frames_per_buffer=1024)
     s_audio = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s_audio.bind((LOCAL_HOST, CLIENT_UDP_PORT+2))
+    s_audio.bind((LOCAL_HOST, CLIENT_UDP_PORT + 2))
     start = time.time()
     while True:
-        p_audio, _ = s_audio.recvfrom(1024*8)
+        p_audio, _ = s_audio.recvfrom(1024 * 8)
         if p_audio == b'END_OF_AUDIO':
             break
         audio = pickle.loads(p_audio)
@@ -137,8 +139,15 @@ def play_audio_video():
     t_video.start()
 
 
-def upload_video(video_name):
-    pass
+def upload_video(video):
+    v = open(f'{video}.mp4', 'rb')
+
+    data = v.read(1024)
+
+    while data:
+        client_streaming_socket.sendto(data, (STREAM_HOST, STREAM_PORT - 1))
+        data = v.read(1024)
+    client_streaming_socket.sendto(b'END_OF_FILE', (STREAM_HOST, STREAM_PORT - 1))
 
 
 if __name__ == "__main__":
@@ -173,4 +182,4 @@ if __name__ == "__main__":
             break
         elif action == "2":
             video_name = input("digite o local onde o video esta:")
-            upload_video(video_name)
+            client_streaming_socket.sendto(f'UPLOAD {video_name}'.encode(), (STREAM_HOST, STREAM_PORT))

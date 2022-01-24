@@ -1,12 +1,13 @@
 import socket
 import pickle
 import cv2
-import imutils
 import wave
 import pyaudio
 import threading
 import time
 import utils
+import moviepy.editor as mp
+import os
 
 HOST = '127.0.0.1'  # IP do servidor de streaming (localhost)
 SERVER_PORT = 5555  # Porta do servidor com o streaming
@@ -43,13 +44,13 @@ def send_video(video, client_addr):
             print("Can't receive more frames.")
             break
 
-        _, buffer = cv2.imencode('.jpeg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        _, buffer = cv2.imencode('.jpeg', frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
         pframe = pickle.dumps(buffer)
         stream_client_socket.sendto(pframe, (client_addr[0], client_addr[1] + 1))
 
         diff_time = time.time() - begin
-        if diff_time < 1 / fps:
-            time.sleep((1 / fps) - diff_time)
+        if diff_time < 1/fps:
+            time.sleep((1/fps) - diff_time)
 
     stream_client_socket.sendto(b'END_OF_VIDEO', (client_addr[0], client_addr[1] + 1))
     cap.release()
@@ -131,15 +132,6 @@ def stop_streaming(user_ip):
     return
 
 
-def stop_group_streaming(user_ip):
-    """
-    deve parar o streaming para o grupo
-    :param user_ip:
-    :return:
-    """
-    return
-
-
 def server_connection(message):
     """
     É a funcao responsável por enviar e receber mensagens do servidor de gerenciamento.
@@ -152,6 +144,70 @@ def server_connection(message):
     data = data_string.split(' ')
     if data[0] == 'USER_INFORMATION':
         return data[2]
+
+
+def extract_audio(video):
+    my_clip = mp.VideoFileClip(f"STREAM-SERV/video_fls/{video}/temp.mp4")
+    my_clip.audio.write_audiofile(f"STREAM-SERV/video_fls/{video}/audio.wav")
+    my_clip.close()
+
+
+def convert_video(video_name):
+    cap = cv2.VideoCapture(f'STREAM-SERV/video_fls/{video_name}/temp.mp4')
+    fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    out_240 = cv2.VideoWriter(f'STREAM-SERV/video_fls/{video_name}/240.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (426, 240))
+    out_480 = cv2.VideoWriter(f'STREAM-SERV/video_fls/{video_name}/480.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (854, 480))
+    out_720 = cv2.VideoWriter(f'STREAM-SERV/video_fls/{video_name}/720.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (1280, 720))
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if ret:
+            frame_240 = cv2.resize(frame, (426, 240), fx=0, fy=0, interpolation=cv2.INTER_CUBIC)
+            frame_480 = cv2.resize(frame, (854, 480), fx=0, fy=0, interpolation=cv2.INTER_CUBIC)
+            frame_720 = cv2.resize(frame, (1280, 720), fx=0, fy=0, interpolation=cv2.INTER_CUBIC)
+            out_240.write(frame_240)
+            out_480.write(frame_480)
+            out_720.write(frame_720)
+        else:
+            break
+
+    cap.release()
+    out_240.release()
+    out_480.release()
+    out_720.release()
+    cv2.destroyAllWindows()
+
+
+def video_download(client_addr, video):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind((HOST, STREAM_PORT - 1))
+    video_name = video
+    try:
+        os.mkdir(f'STREAM-SERV/video_fls/{video_name}')
+    except FileExistsError:
+        count = 2
+        while True:
+            video_name_temp = video_name + f'({count})'
+            try:
+                os.mkdir(f'STREAM-SERV/video_fls/{video_name_temp}')
+                video_name = video_name_temp
+                break
+            except FileExistsError:
+                count += 1
+
+    v = open(f"STREAM-SERV/video_fls/{video_name}/temp.mp4", 'wb')
+    s.sendto(f'UPLOAD_ACK {video}'.encode(), client_addr)
+    while True:
+        msg, _ = s.recvfrom(1024)
+        if msg == b'END_OF_FILE':
+            break
+        v.write(msg)
+    v.close()
+
+    extract_audio(video_name)
+    print("Convertendo os videos...")
+    convert_video(video_name)
+    os.remove(f"STREAM-SERV/video_fls/{video_name}/temp.mp4")
+    print("Video salvo")
 
 
 def threaded_client(message):
@@ -171,12 +227,15 @@ def threaded_client(message):
         stream_client_socket.sendto(message.encode(), client_addr)
     elif data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
-        is_premium= server_connection(message_to_server)
+        is_premium = server_connection(message_to_server)
         send_audio_video_one_person(client_addr, data[2], data[3], is_premium)
     elif data[0] == 'PLAY_VIDEO_TO_GROUP':
         message_to_server = get_user_information(data[1])
         is_premium, group_members = server_connection(message_to_server)
         send_audio_video_group(group_members, data[2], data[3], is_premium)
+    elif data[0] == 'UPLOAD':
+        t = threading.Thread(target=video_download, args=(client_addr, data[1]))
+        t.start()
     elif data[0] == 'PARAR_STREAMING':
         stop_streaming(client_addr)
     else:
