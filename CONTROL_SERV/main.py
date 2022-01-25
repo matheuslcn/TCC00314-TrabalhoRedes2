@@ -19,23 +19,28 @@ def logout(user_name):
     :param user_name:
     :return 'SAIR_DA_APP_ACK':
     """
-
-    # logged_users.remove( user_name )
+    i = 0
+    for user in utils.logged_users:
+        if user_name == user[0]:
+            del utils.logged_users[i]
+            break
+        i += 1
     return 'SAIR_DA_APP_ACK'
 
 
-def login(user_name):
+def login(user_name, user_ip):
     """
     Se achar o usuario no bd, manda a mensagem 'STATUS_DO_USUARIO',
         informando ID, tipo de servico e membros do grupo.
     Caso contrario, cria um no bd e envia 'ENTRAR_NA_APP_ACK' com uma mensagem de confirmacao da criacao.
+    :param user_ip:
     :param user_name:
-    :param user:
     :return 'STATUS_DO_USUARIO {user} {bool(premium)}' ou 'ENTRAR_NA_APP_ACK'  :
     """
-    # if user_name in logged_users:
-    #     return 'USUARIO_JA_LOGADO'
-    # logged_users.add( user_name )
+    for user in utils.logged_users:
+        if user[0] == user_name:
+            return 'USUARIO_JA_LOGADO'
+    utils.logged_users.append((user_name, user_ip))
     return utils.entrar_na_app(user_name)
 
 
@@ -86,7 +91,7 @@ def threaded_client(conn):
             message = get_user_information(data[1])
 
         elif msg == 'ENTRAR_NA_APP':
-            message = login(data[1])
+            message = login(data[1], data[2])
             client_name = data[1]
 
         elif msg == 'SAIR_DA_APP':
@@ -103,7 +108,7 @@ def threaded_client(conn):
 
         elif msg == 'VER_GRUPO':
             # message = utils.ver_grupo(client_name)
-            message = utils.get_grupo( client_name )
+            message = utils.get_grupo(client_name)
 
         else:
             print("Mensagem invalida")

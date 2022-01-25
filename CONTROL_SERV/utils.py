@@ -22,6 +22,9 @@ from sqlalchemy.pool import StaticPool
 
 #     return prt_fun
 
+logged_users = []
+
+
 def init_db_engine():
     global engine
     engine = sql.create_engine('sqlite:///CONTROL_SERV/controle.db', connect_args={'check_same_thread': False},
@@ -57,11 +60,18 @@ def get_user_information(user_name):
     s = "SELECT * FROM \"user\" WHERE name = \"{}\"".format(user_name)
     tup = conn.execute(sql.text(s)).first()
 
-    msg = "USER_INFORMATION {} {}".format(user_name, bool(tup.premium))
+    user_ip = ''
+    for user in logged_users:
+        if user[0] == user_name:
+            user_ip = user[1]
+
+    msg = f"USER_INFORMATION {user_name} {user_ip} {bool(tup.premium)} "
 
     grupo = ver_grupo(user_name)
     if grupo != "":
-        msg = msg + "\nGRUPO\n" + grupo
+        msg += grupo
+    else:
+        msg += ","
     return msg
 
 
@@ -87,8 +97,7 @@ def is_user_premium(user_name):
 
 
 def criar_grupo(user_name):
-
-    if not is_user_premium(user_name) or is_group_owner( user_name ):
+    if not is_user_premium(user_name) or is_group_owner(user_name):
         return "CRIAR_GRUPO_NACK"
 
     s1 = "INSERT INTO \"group\" ( owner ) VALUES ( \"{}\" )".format(user_name)
@@ -114,14 +123,15 @@ def add_grupo(owner_name, user_name):
     conn.execute(sql.text(s))
     return "ADD_USER_GROUP_ACK"
 
-def upgrade_user( user_name ):
 
-    if not check_user( user_name ):
+def upgrade_user(user_name):
+    if not check_user(user_name):
         return "UPGRADE_USER_NACK"
-    
-    s = "UPDATE \"user\" SET premium = 1 WHERE name = \"{}\" ".format( user_name )
+
+    s = "UPDATE \"user\" SET premium = 1 WHERE name = \"{}\" ".format(user_name)
     conn.execute(sql.text(s))
     return "UPGRADE_USER_ACK"
+
 
 def remover_usr_grupo(owner_name, user_name):
     if not (is_user_premium(owner_name) and is_group_owner(owner_name)):
@@ -131,16 +141,16 @@ def remover_usr_grupo(owner_name, user_name):
     conn.execute(sql.text(s))
     return "RMV_USER_GRUPO_ACK"
 
-def get_grupo( owner_name ):
 
+def get_grupo(owner_name):
     s = "SELECT name FROM \"membership\" WHERE owner = \"{}\"".format(owner_name)
-    seq = conn.execute( sql.text( s ) )
-    return [ x.name for x in seq ]
+    seq = conn.execute(sql.text(s))
+    return [x.name for x in seq]
+
 
 def ver_grupo(owner_name):
-
     if not (is_user_premium(owner_name) and is_group_owner(owner_name)):
         return ""
 
-    seq = get_grupo( owner_name )
-    return "\n".join(x for x in seq)
+    seq = get_grupo(owner_name)
+    return ",".join(x for x in seq)

@@ -113,9 +113,13 @@ def send_audio_video_one_person(client_addr, video_name, quality, is_premium):
 
 def send_audio_video_group(group, video_name, quality, isPremium):
     if isPremium:
-        for user in group:
-            thread = threading.Thread(target=send_audio_video, args=(user, video_name, quality))
-            thread.start()
+        g = group.split(',')
+        for user in g:
+            if user:
+                message_to_server = get_user_information(user)
+                user_ip, _, _ = server_connection(message_to_server)
+                thread = threading.Thread(target=send_audio_video, args=(user_ip, video_name, quality))
+                thread.start()
     else:
         """
          Deve mostrar a mensagem:
@@ -130,20 +134,6 @@ def stop_streaming(user_ip):
     :return:
     """
     return
-
-
-def server_connection(message):
-    """
-    É a funcao responsável por enviar e receber mensagens do servidor de gerenciamento.
-    :param message:
-    :return:
-    """
-    stream_server_socket.sendall(message.encode())
-    data_byte = stream_server_socket.recv(1024)
-    data_string = data_byte.decode()
-    data = data_string.split(' ')
-    if data[0] == 'USER_INFORMATION':
-        return data[2]
 
 
 def extract_audio(video):
@@ -210,6 +200,20 @@ def video_download(client_addr, video):
     print("Video salvo")
 
 
+def server_connection(message):
+    """
+    É a funcao responsável por enviar e receber mensagens do servidor de gerenciamento.
+    :param message:
+    :return:
+    """
+    stream_server_socket.sendall(message.encode())
+    data_byte = stream_server_socket.recv(1024)
+    data_string = data_byte.decode()
+    data = data_string.split(' ')
+    if data[0] == 'USER_INFORMATION':
+        return data[2], eval(data[3]), data[4]
+
+
 def threaded_client(message):
     """
     É a funcao que processa a mensagem recebida pelo cliente, e de acordo com o tipo de mensagem,
@@ -227,11 +231,11 @@ def threaded_client(message):
         stream_client_socket.sendto(message.encode(), client_addr)
     elif data[0] == 'REPRODUZIR_VIDEO':
         message_to_server = get_user_information(data[1])
-        is_premium, _ = server_connection(message_to_server)
+        _, is_premium, _ = server_connection(message_to_server)
         send_audio_video_one_person(client_addr, data[2], data[3], is_premium)
     elif data[0] == 'PLAY_VIDEO_TO_GROUP':
         message_to_server = get_user_information(data[1])
-        is_premium, group_members = server_connection(message_to_server)
+        _, is_premium, group_members = server_connection(message_to_server)
         send_audio_video_group(group_members, data[2], data[3], is_premium)
     elif data[0] == 'UPLOAD':
         t = threading.Thread(target=video_download, args=(client_addr, data[1]))
