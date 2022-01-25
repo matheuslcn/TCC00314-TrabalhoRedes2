@@ -102,7 +102,8 @@ def threaded_client(conn):
             message = utils.remover_usr_grupo(client_name, data[1])
 
         elif msg == 'VER_GRUPO':
-            message = utils.ver_grupo(client_name)
+            # message = utils.ver_grupo(client_name)
+            message = utils.get_grupo( client_name )
 
         else:
             print("Mensagem invalida")

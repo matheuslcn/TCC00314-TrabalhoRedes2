@@ -118,15 +118,19 @@ def remover_usr_grupo(owner_name, user_name):
     if not (is_user_premium(owner_name) and is_group_owner(owner_name)):
         return "RMV_USER_GRUPO_NACK"
 
-    s = "DELETE FROM \"membership\" WHERE user = \"{}\"".format(user_name)
+    s = "DELETE FROM \"membership\" WHERE name = \"{}\"".format(user_name)
     conn.execute(sql.text(s))
     return "RMV_USER_GRUPO_ACK"
 
+def get_grupo( owner_name ):
+
+    s = "SELECT name FROM \"membership\" WHERE owner = \"{}\"".format(owner_name)
+    seq = conn.execute( sql.text( s ) )
+    return [ x.name for x in seq ]
 
 def ver_grupo(owner_name):
     if not (is_user_premium(owner_name) and is_group_owner(owner_name)):
         return ""
 
-    s = "SELECT user FROM \"membership\" WHERE owner = \"{}\"".format(owner_name)
-    seq = conn.execute(sql.text(s))
+    seq = get_grupo()
     return "\n".join(x for x in seq)
