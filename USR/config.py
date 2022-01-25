@@ -48,6 +48,11 @@ def video_list(videos):
     return
 
 
+def upgrade():
+    """MOSTRA UM POPUP COM ESTA MENSAGEM"""
+    print("agora voce é um usuario premium")
+
+
 def tcp_message():
     """
     É a função responsável pelo recebimento e processamento de mensagens do servidor de gerenciamento
@@ -65,6 +70,8 @@ def tcp_message():
         elif data[0] == 'SAIR_DA_APP_ACK':
             client_server_socket.close()
             client_streaming_socket.close()
+        elif data[0] == "UPGRADE_USER_ACK":
+            upgrade()
 
 
 def udp_message():
@@ -170,7 +177,8 @@ if __name__ == "__main__":
     client_server_socket.sendall(message.encode())
 
     while True:
-        action = input("digite 1 para ver um video ou 2 para upar um video ou 0 para sair: ")
+        action = input("digite 1 para ver um video, 2 para upar um video, " +
+                       "3 para fazer um upgrade da sua conta ou 0 para sair: ")
         if action == "1":
             video_name = input("digite o nome do video que deseja assistir: ")
             quality = input("digite a qualidade do video: ")
@@ -183,3 +191,6 @@ if __name__ == "__main__":
         elif action == "2":
             video_name = input("digite o local onde o video esta:")
             client_streaming_socket.sendto(f'UPLOAD {video_name}'.encode(), (STREAM_HOST, STREAM_PORT))
+        elif action == "3":
+            client_server_socket.sendall(b'UPGRADE')
+

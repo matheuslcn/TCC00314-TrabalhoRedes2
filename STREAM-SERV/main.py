@@ -96,7 +96,7 @@ def send_audio_video(client_addr, video_name, quality):
 
 
 def send_audio_video_one_person(client_addr, video_name, quality, is_premium):
-    if not is_premium:
+    if is_premium:
         """
         Deve transmitir o video e mostrar a mensagem:
         “REPRODUZINDO O VÍDEO <<NOME DO VÍDEO>>, COM RESOLUÇÃO <<NOMENCLATURA DA RESOLUÇÃO>>”.

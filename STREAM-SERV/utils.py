@@ -21,7 +21,7 @@ def add_video(name, duration, min_quality=0, max_quality=2, file_type='.mp4'):
 
     # -----------------------------------------------------------
     # Niveis de qualidade:
-    # 0 - 360p
+    # 0 - 240p
     # 1 - 480p
     # 2 - 720p
     min_quality = clip(min_quality, 0, 2)
@@ -63,20 +63,20 @@ def fetch_video(video_name, quality):
             raise ValueError("VIDEO NAO ENCONTRADO")
 
         db_tup = seq.first()
-        if not ( db_tup.max_quality >= quality >= db_tup.min_quality ):
-            raise ValueError( "QUALIDADE NAO DISPONIVEL" )
-        
-        file_name = get_file_name( db_tup.name , quality , db_tup.file )
-        return open( file_name , 'rb')
+        if not (db_tup.max_quality >= quality >= db_tup.min_quality):
+            raise ValueError("QUALIDADE NAO DISPONIVEL")
+
+        file_name = get_file_name(db_tup.name, quality, db_tup.file)
+        return open(file_name, 'rb')
+
 
 def list_all_videos():
-
-    engine = sql.create_engine( 'sqlite:///STREAM-SERV/streaming.db')
+    engine = sql.create_engine('sqlite:///STREAM-SERV/streaming.db')
     with engine.connect() as conn:
 
-        seq = conn.execute( "SELECT name FROM video" )
+        seq = conn.execute("SELECT name FROM video")
         if seq is None:
             return
-        
+
         for row in seq:
             yield row
