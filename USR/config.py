@@ -96,13 +96,13 @@ if __name__ == "__main__":
     message = f'ENTRAR_NA_APP {username} {socket.gethostname()}'
     client_server_socket.sendall(message.encode())
 
-    while True:
-        action = input("digite 1 para ver um video ou 2 para sair: ")
-        if action == "1":
-            video_name = input("digite o nome do video que deseja assistir: ")
-            quality = input("digite a qualidade do video: ")
-            client_streaming_socket.sendto(f'REPRODUZIR_VIDEO {username} {video_name} {quality}'.encode(),
-                                           (STREAM_HOST, STREAM_PORT))
-        elif action == "2":
-            client_server_socket.sendall('SAIR_DA_APP'.encode())
-            break
+    # while True:
+    #     action = input("digite 1 para ver um video ou 2 para sair: ")
+    #     if action == "1":
+    #         video_name = input("digite o nome do video que deseja assistir: ")
+    #         quality = input("digite a qualidade do video: ")
+    #         client_streaming_socket.sendto(f'REPRODUZIR_VIDEO {username} {video_name} {quality}'.encode(),
+    #                                        (STREAM_HOST, STREAM_PORT))
+    #     elif action == "2":
+    #         client_server_socket.sendall('SAIR_DA_APP'.encode())
+    #         break
