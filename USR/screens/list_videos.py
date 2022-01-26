@@ -6,21 +6,25 @@ def add_video():
     print("Adicionar Vídeo")
 
 
-def list_videos_widget(root, videos):
+def list_videos_widget(root, videos, group):
     for video in videos:
-        video_widget(root, video)
+        video_widget(root, video, group)
 
 
-def play_video(video):
-    print("Rodar o Video")
+def play_video(video, group):
+    print("Rodar o Video " + video['title'])
+    if(group == None):
+        print("Rodar apenas para mim")
+    else:
+        print("Rodar para o grupo " + group['title'])
 
 
 def delete_video(video):
-    print("Apagar o video")
+    print("Apagar o Video " + video['title'])
 
 
-def video_widget(root, video):
-    video_frame = tk.Frame(root, bg=colors.dark_blue_color)
+def video_widget(root, video, group):
+    video_frame = tk.Frame(root, bg=colors.dark_gray_color)
     video_frame.pack(pady=10)
 
     # usar imagem depois
@@ -32,12 +36,12 @@ def video_widget(root, video):
     )
     label_image.grid(row=1, column=1, padx=(20, 100), pady=5)
 
-    title_frame = tk.Frame(video_frame, bg=colors.dark_blue_color)
+    title_frame = tk.Frame(video_frame, bg=colors.dark_gray_color)
     title_frame.grid(row=1, column=2, padx=(20, 150), pady=5)
     title_label = tk.Label(
         title_frame,
         text=video['title'],
-        bg=colors.dark_blue_color,
+        bg=colors.dark_gray_color,
         fg=colors.white_color,
         font=("sans-serif", 12)
     )
@@ -45,25 +49,25 @@ def video_widget(root, video):
     duration_label = tk.Label(
         title_frame,
         text=video['duration'],
-        bg=colors.dark_blue_color,
+        bg=colors.dark_gray_color,
         fg=colors.white_color,
         font=("sans-serif", 12)
     )
     duration_label.pack()
 
-    options_frame = tk.Frame(video_frame, bg=colors.dark_blue_color)
+    options_frame = tk.Frame(video_frame, bg=colors.dark_gray_color)
     options_frame.grid(row=1, column=3, padx=(150, 20), pady=5)
     play_btn = tk.Button(
         options_frame,
         text="Play",
-        bg=colors.light_blue_color,
+        bg=colors.dark_blue_color,
         fg=colors.white_color,
         padx=20,
         font=("sans-serif", 12),
         width=5,
-        command=lambda: play_video(video)
+        command=lambda: play_video(video, group)
     )
-    play_btn.pack(pady=10)
+    play_btn.grid(row=1, column=1, padx=10)
     delete_btn = tk.Button(
         options_frame,
         text="Delete",
@@ -74,10 +78,10 @@ def video_widget(root, video):
         width=5,
         command=lambda: delete_video(video)
     )
-    delete_btn.pack(pady=3)
+    delete_btn.grid(row=1, column=2, padx=10)
 
 
-def list_videos_screen(root):
+def list_videos_screen(root, owner, group=None):
     videos = [
         {
             'title': 'Titulo Video 01',
@@ -120,11 +124,11 @@ def list_videos_screen(root):
 
     add_video_btn = tk.Button(
         add_video_frame,
-        text="Adicionar",
+        text="Adicionar Vídeo",
         bg=colors.green_color,
         fg=colors.white_color,
         padx=20,
-        width=5,
+        width=10,
         font=("sans-serif", 12),
         command=add_video,
     )
@@ -135,6 +139,6 @@ def list_videos_screen(root):
     list_videos_frame.configure(width=root_width, height=root_height)
     list_videos_frame.propagate(0)
 
-    list_videos_widget(list_videos_frame, videos)
+    list_videos_widget(list_videos_frame, videos, group)
 
     return videos_frame

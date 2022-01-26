@@ -13,10 +13,12 @@ def update_screen(screen):
     login.destroy()
 
     if screen == 0:
-        gps_screen.pack_forget()
+        gps_screen.destroy()
+        videos_screen = list_videos_screen(root, login_text.get())
         videos_screen.pack()
     elif screen == 1:
-        videos_screen.pack_forget()
+        videos_screen.destroy()
+        gps_screen = groups_screen(root, login_text.get())
         gps_screen.pack()
     else:
         print("Deu ruim")
@@ -83,8 +85,8 @@ if __name__ == "__main__":
     # widgets
     header = header_widget(root)
     login = login_widget(root)
-    videos_screen = list_videos_screen(root)
-    gps_screen = groups_screen(root)
+    videos_screen = list_videos_screen(root, login_text.get())
+    gps_screen = groups_screen(root, login_text.get())
 
     header.pack()
     login.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
