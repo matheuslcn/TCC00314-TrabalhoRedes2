@@ -87,6 +87,7 @@ def udp_message():
         if data[0] == 'LISTA_DE_VIDEOS':
             video_list(data[1])
         if data[0] == 'UPLOAD_ACK':
+            print(data[1])
             upload_video(data[1])
 
 
@@ -185,13 +186,8 @@ def init():
 
 
 if __name__ == "__main__":
-    # Criacao e conexao do soquete do servidor
-    init()
-
     # login do usuario
     username = input("digite o usuario:")
-    message = f'ENTRAR_NA_APP {username} {socket.gethostname()}'
-    client_server_socket.sendall(message.encode())
 
     while True:
         action = input("digite 1 para ver um video, 2 para upar um video, " +

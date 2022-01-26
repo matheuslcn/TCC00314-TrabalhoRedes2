@@ -5,13 +5,11 @@ import easygui
 
 
 def add_video():
-    """
+
     video_path = easygui.fileopenbox()
     temp = video_path.split('\\')
     video_name = temp[len(temp)-1]
     config.send_message_to_streaming(f'UPLOAD {video_name} {video_path}')
-    config.upload_video(video_path)
-    """
     print("video adicionado")
 
 

@@ -8,6 +8,7 @@ import socket
 
 
 def update_screen(screen):
+
     global login
     global gps_screen
     global videos_screen
