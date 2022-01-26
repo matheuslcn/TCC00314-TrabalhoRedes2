@@ -146,8 +146,9 @@ def play_audio_video():
     t_video.start()
 
 
-def upload_video(video):
-    v = open(f'{video}.mp4', 'rb')
+def upload_video(video_path):
+    print(video_path)
+    v = open(video_path, 'rb')
 
     data = v.read(1024)
 
@@ -157,19 +158,35 @@ def upload_video(video):
     client_streaming_socket.sendto(b'END_OF_FILE', (STREAM_HOST, STREAM_PORT - 1))
 
 
-if __name__ == "__main__":
-    # Criacao e conexao do soquete do servidor
+def send_message_to_streaming(message):
+    client_streaming_socket.sendto(message.encode(), (STREAM_HOST, STREAM_PORT))
+
+
+def send_message_to_manager(message):
+    client_server_socket.sendto(message.encode(), (SERVER_HOST, SERVER_PORT))
+
+
+def init():
+    global client_server_socket
+    global client_streaming_socket
+
+    # Criacao e conexao do soquete de comunicacao com o servidor de gerenciamento
     client_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_server_socket.bind((LOCAL_HOST, CLIENT_TCP_PORT))
     client_server_socket.connect((SERVER_HOST, SERVER_PORT))
     server_conn = threading.Thread(target=tcp_message)  # Cria uma thread para a conexao com o servidor gerenciador
     server_conn.start()
 
-    # Criacao e conexao do soquete de comunicacao com o streaming
+    # Criacao do soquete de comunicacao com o streaming
     client_streaming_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     client_streaming_socket.bind((LOCAL_HOST, CLIENT_UDP_PORT))
     streaming_conn = threading.Thread(target=udp_message)  # Cria uma thread para a conexao com o servidor de streaming
     streaming_conn.start()
+
+
+if __name__ == "__main__":
+    # Criacao e conexao do soquete do servidor
+    init()
 
     # login do usuario
     username = input("digite o usuario:")

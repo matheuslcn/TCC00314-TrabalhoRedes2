@@ -3,6 +3,8 @@ import USR.assets.colors as colors
 from USR.screens.groups import groups_screen
 from USR.screens.list_videos import list_videos_screen
 from USR.widgets.header import header_widget
+import USR.config as config
+import socket
 
 
 def update_screen(screen):
@@ -26,6 +28,7 @@ def update_screen(screen):
 
 def check_login(login):
     print('validar usuario ' + login)
+    config.send_message_to_manager(f'ENTRAR_NA_APP {login} {socket.gethostname()}')
     login_text.set(login)
     global header
     header.destroy()
@@ -57,6 +60,8 @@ def login_widget(root):
 
 
 if __name__ == "__main__":
+    config.init()
+
     root = tk.Tk()
     # full screen ubuntu
     # root.attributes('-zoomed', True)

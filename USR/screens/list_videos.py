@@ -1,9 +1,18 @@
 import tkinter as tk
 import USR.assets.colors as colors
+import USR.config as config
+import easygui
 
 
 def add_video():
-    print("Adicionar Vídeo")
+    """
+    video_path = easygui.fileopenbox()
+    temp = video_path.split('\\')
+    video_name = temp[len(temp)-1]
+    config.send_message_to_streaming(f'UPLOAD {video_name} {video_path}')
+    config.upload_video(video_path)
+    """
+    print("video adicionado")
 
 
 def list_videos_widget(root, videos, group):
@@ -13,7 +22,7 @@ def list_videos_widget(root, videos, group):
 
 def play_video(video, group):
     print("Rodar o Video " + video['title'])
-    if(group == None):
+    if group is None:
         print("Rodar apenas para mim")
     else:
         print("Rodar para o grupo " + group['title'])
