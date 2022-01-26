@@ -53,6 +53,10 @@ def get_user_information(user_name):
     return utils.get_user_information(user_name)
 
 
+def upgrade(user_name):
+    return utils.upgrade_user(user_name)
+
+
 def create_connection(host, port):
     """
     Cria um socket TCP e espera conexoes com clientes, quando uma conexao é aceita,
@@ -109,6 +113,9 @@ def threaded_client(conn):
         elif msg == 'VER_GRUPO':
             # message = utils.ver_grupo(client_name)
             message = utils.get_grupo(client_name)
+
+        elif msg == "UPGRADE":
+            message = upgrade(client_name)
 
         else:
             print("Mensagem invalida")

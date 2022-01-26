@@ -96,7 +96,7 @@ def send_audio_video(client_addr, video_name, quality):
 
 
 def send_audio_video_one_person(client_addr, video_name, quality, is_premium):
-    if not is_premium:
+    if is_premium:
         """
         Deve transmitir o video e mostrar a mensagem:
         “REPRODUZINDO O VÍDEO <<NOME DO VÍDEO>>, COM RESOLUÇÃO <<NOMENCLATURA DA RESOLUÇÃO>>”.
@@ -167,10 +167,9 @@ def convert_video(video_name):
     cv2.destroyAllWindows()
 
 
-def video_download(client_addr, video):
+def video_download(client_addr, video_name, video_path):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind((HOST, STREAM_PORT - 1))
-    video_name = video
     try:
         os.mkdir(f'STREAM-SERV/video_fls/{video_name}')
     except FileExistsError:
@@ -185,7 +184,7 @@ def video_download(client_addr, video):
                 count += 1
 
     v = open(f"STREAM-SERV/video_fls/{video_name}/temp.mp4", 'wb')
-    s.sendto(f'UPLOAD_ACK {video}'.encode(), client_addr)
+    s.sendto(f'UPLOAD_ACK {video_path}'.encode(), client_addr)
     while True:
         msg, _ = s.recvfrom(1024)
         if msg == b'END_OF_FILE':
@@ -238,7 +237,7 @@ def threaded_client(message):
         _, is_premium, group_members = server_connection(message_to_server)
         send_audio_video_group(group_members, data[2], data[3], is_premium)
     elif data[0] == 'UPLOAD':
-        t = threading.Thread(target=video_download, args=(client_addr, data[1]))
+        t = threading.Thread(target=video_download, args=(client_addr, data[1], data[2]))
         t.start()
     elif data[0] == 'PARAR_STREAMING':
         stop_streaming(client_addr)
